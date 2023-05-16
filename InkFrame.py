@@ -667,7 +667,7 @@ def createDash():
         draw_black.line([(x, y), (int(screen.width - (x*2)), y)], black)
 
         if dashboard.show_weather == 1 and weather_error != 404:
-            y = y + 2
+            y = y + 1
             draw_black.text((x,y),"Tomorrow: ", font = SFWdetails_semibold, fill = black)
             t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),"Tomorrow :", font=SFWdetails_semibold)
             x = x + test_t_w
@@ -694,7 +694,7 @@ def createDash():
             t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),tomorrow_string, font=SFWdetails_semibold)
             x = x + test_t_w + 2
             if popp > 0:
-                imageB.paste(tomorrow_pop_icon, (x,(y+2)),tomorrow_pop_icon)
+                imageB.paste(tomorrow_pop_icon, (x,(y+3)),tomorrow_pop_icon)
                 x = x + int(tomorrow_pop_icon.size[0]) + 2
                 draw_black.text((x,y),str(popp)+"%" , font = SFWdetails_semibold, fill = black)
                 t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),str(popp)+"%", font=SFWdetails_semibold)
@@ -703,6 +703,7 @@ def createDash():
             x = x + int(tomorrow_sunrise_icon.size[0]) +2
             draw_black.text((x,y),datetime.fromtimestamp(today_weather.sun_rise).strftime('%H:%M') , font = SFWdetails_semibold, fill = black)
             y = y + int(test_t_h) + 2
+            y = y + 5
         else:
             y = y +1
         x = 10
@@ -1113,6 +1114,12 @@ def createDash():
     gTy = screen.height - int(test_t_h + 4)
     draw_black.text((gTx, gTy), hourglass.last_refresh, font=SFMonth, fill=black)
 
+
+    #Save screenshot
+    #s_b = imageB.convert('RGBA')
+    #s_r = imageR.convert('RGBA')
+    #s_b.save("InkFrame_B.png", format='png')
+    #s_r.save("InkFrame_R.png", format='png')
     epd.display(epd.getbuffer(imageB),epd.getbuffer(imageR))
     #epd.display(epd.getbuffer(imageR),epd.getbuffer(imageB))
     epd.sleep()
@@ -1245,7 +1252,7 @@ def main():
     screen.refresh_rate_min = int(dash_config['refresh-rate-min-id'])
     screen.sleep_hour = int(dash_config['screen_sleep_hour-id'])
     screen.wake_hour = int(dash_config['screen_wake_hour-id'])
-    screen.sleep_hour = 16
+    #screen.sleep_hour = 16
 
     print("Initial used RAM is: "+str(performance.usedram))
     while True :
