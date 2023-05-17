@@ -58,6 +58,7 @@ class hourglass:
     live_cutin_hour : int
     live_cutout_hour : int
     last_refresh : str
+    evening_hour : str
 
 
 @dataclass
@@ -876,7 +877,7 @@ def createDash():
     is_garbage_today = (g_data.landfill, g_data.recycle, g_data.compost, g_data.xmas_tree, g_data.dumpster)
 
     garbage_collection_hour = int(garbage_vars['all-collection-time-over-id'])
-    comparetime = hourglass.curenttime
+    comparetime = hourglass.evening_hour
     
     gTx = 10
     gYincr = 6
@@ -994,12 +995,7 @@ def createDash():
             gTx = gTx - int(g_image_icon.size[1]+4)
         gYincr = int(g_image_icon.size[1]+10)
         gTy = gTy + gYincr
-        if dashboard.show_quote == 1:
-            lx = 247
-            ly = gTy
-            draw_black.line([(lx, ly), ((lx+300), ly)], black)
-            gTy = gTy + 10
-
+        
     if 1 in is_garbage_tomorrow :
         if dashboard.show_quote == 1:
             lx = 247
@@ -1253,6 +1249,7 @@ def main():
     screen.sleep_hour = int(dash_config['screen_sleep_hour-id'])
     screen.wake_hour = int(dash_config['screen_wake_hour-id'])
     #screen.sleep_hour = 16
+    hourglass.evening_hour = 18
 
     print("Initial used RAM is: "+str(performance.usedram))
     while True :
