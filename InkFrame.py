@@ -16,6 +16,8 @@ import time
 from PIL import Image,ImageDraw,ImageFont
 import traceback
 from openweather import current_weather, tomorrow_weather
+from aqidata import current_aqi, get_aqi_status_data, aqi_trend, write_aqi_stats
+from todoist import gettodolist, getodolistbyduedate
 from generic_transit import next_transit
 from transit import gettransitdepartures
 from getquote import quoteoftheday, addquotetofile
@@ -48,6 +50,10 @@ class dashboard:
     show_transit : int
     show_quote : int
     quote : str
+    show_todo : int
+    todo_rows : int
+    todo_filter :str
+    show_garbage : int
 
 @dataclass
 class hourglass:
@@ -80,6 +86,7 @@ class performance:
     freeram : int
     ramincrease : int
     previousram : int
+    cli : str
 
 
 
@@ -108,6 +115,7 @@ def createDash():
 
     if dash_config['use_red-id'] == "TRUE":
         screen.use_red = 1
+        print("Red pigment is enabled")
     else:
         screen.use_red = 0
 
@@ -128,6 +136,19 @@ def createDash():
     else : 
         dashboard.show_quote = 0
 
+    if dash_config['show-todo-id'] == "TRUE":
+        dashboard.show_todo = 1
+    else : 
+        dashboard.show_todo = 0
+
+    if dash_config['show-garbage-id'] == "TRUE":
+        dashboard.show_garbage = 1
+    else : 
+        dashboard.show_garbage = 0
+        
+    
+    dashboard.todo_rows = int(dash_config['todo-rows-id'])
+    dashboard.todo_filter = dash_config['todo-filter-id']
 
 
 
@@ -150,9 +171,13 @@ def createDash():
 
     # Check if we should clear the E-ink (daily)
     if screen.clean_screen < int(datetime.now().strftime("%d")):
-        print("Time to clean the screen (once daily)")
-        epd.Clear()
-        screen.clean_screen = int(datetime.now().strftime("%d"))
+        if performance.cli == "noclean":
+            print("Screen clean skipped")
+            performance.cli = ""
+        else:
+            print("Time to clean the screen (once daily)")
+            epd.Clear()
+            screen.clean_screen = int(datetime.now().strftime("%d"))
 
     ####################
     ###################
@@ -177,7 +202,13 @@ def createDash():
     SFWdetails_bold = ImageFont.truetype("fonts/SF-Compact-Rounded-Bold.ttf",22)
     SFWdetails_semibold = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",22)
     SFWdetails_sub = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",16)
-    
+    SFWdetails_sub_bold = ImageFont.truetype("fonts/SF-Compact-Rounded-Bold.ttf",16)
+    SFWAQI_bold = ImageFont.truetype("fonts/SF-Compact-Rounded-Bold.ttf",22)
+    SFWAQI_bold_small = ImageFont.truetype("fonts/SF-Compact-Rounded-Bold.ttf",14)
+
+    SFToDo = ImageFont.truetype("fonts/SF-Compact-Rounded-Medium.otf",24)
+    SFToDo_sub = ImageFont.truetype("fonts/SF-Compact-Rounded-Medium.otf",16)
+
     SFQuote = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",26)
     SFQuoteAuthor = ImageFont.truetype("fonts/SF-Compact-Rounded-Medium.otf",20)
     SFReminder = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",24)
@@ -192,7 +223,7 @@ def createDash():
     grey = 'rgb(206,206,206)'
 
     w_x = 10
-    w_y = 80
+    w_y = 75
     w_icon_offset = 170
     w_icon_row_height = 40
 
@@ -208,26 +239,12 @@ def createDash():
     draw_red = ImageDraw.Draw(imageR)
 
     # Find out how many characters per line of screen for Quotes
-    test_t = "H"
-    test_w_max = int(screen.width - 220)
-    text_c = 0
-    test_t_w = 0
-    while test_t_w < test_w_max :
-        test_t = test_t + "H"
-        test_g, test_g, test_t_w, test_t_h = draw_black.textbbox((0,0),test_t, font=SFQuote)
-        #print("Quote Feature : Max text width is "+str(test_t_w)+" number of chars "+str(len(test_t)))
-    screen.quote_max = test_t_w
+    screen.quote_max = screen.width - 40
 
     # Find out how many characters per line of screen for Reminder text
-    test_t = "H"
-    test_w_max = int(screen.width - 220)
-    text_c = 0
-    test_t_w = 0
-    while test_t_w < test_w_max :
-        test_t = test_t + "H"
-        test_g, test_g, test_t_w, test_t_h = draw_black.textbbox((0,0),test_t, font=SFReminder)
-        #print("Quote Feature : Max text width is "+str(test_t_w)+" number of chars "+str(len(test_t)))
-    screen.reminder_max = test_t_w
+    screen.reminder_max = screen.width - 40
+
+    screen.offset = 95
 
     header_Day = datetime.now().strftime("%A")
     header_Month_Date = datetime.now().strftime("%b %-d")
@@ -285,13 +302,6 @@ def createDash():
         draw_black.text((x, y), header_Month, font = SFMonth, fill=white)
 
     
-    today_weather = current_weather()
-    weather_error = today_weather.error
-    
-    forecast_weather = tomorrow_weather()
-    if weather_error != 404:
-        today_forecast = forecast_weather[0]
-        tomorrow_forecast = forecast_weather[1]
     
     #  #  # ######   ##   ##### #    # ###### #####  
     #  #  # #       #  #    #   #    # #      #    # 
@@ -301,6 +311,22 @@ def createDash():
      ## ##  ###### #    #   #   #    # ###### #    # 
  
     if dashboard.show_weather == 1:
+        today_weather = current_weather()
+        today_aqi = current_aqi()
+        weather_error = today_weather.error
+
+        yesterday = datetime.now()+ timedelta(days=-1)
+        y_aqi_stats_file = "aqi_stats/aqi_"+yesterday.strftime("%d_%m")
+        aqi_stats_file = "aqi_stats/aqi_"+datetime.now().strftime("%d_%m")
+
+        write_aqi_stats(aqi_stats_file, today_aqi.aqi_value)
+        aqi_trend_ind = aqi_trend(aqi_stats_file, y_aqi_stats_file, today_aqi.aqi_value)
+
+    
+        forecast_weather = tomorrow_weather()
+        today_forecast = forecast_weather[0]
+        tomorrow_forecast = forecast_weather[1]
+
         #x = xcal + int(cal_icon.size[0] + 10)
         weather_cond_icon = Image.open(os.path.join(weatherdir, today_weather.icon+'.png'))
 
@@ -350,7 +376,9 @@ def createDash():
             fl_icon_b = Image.open(os.path.join(weatherdir, "temp_high_b.png"))
             fl_icon_r =  Image.open(os.path.join(weatherdir, "temp_high_r.png"))
             fl_icon_red = 1
-
+        feels_line_text = str(round(today_weather.feelslike,1))+"\N{DEGREE SIGN}"
+        if today_weather.icon == "EE":
+            feels_line_text = "?"
         if fl_icon_red == 1 and screen.use_red == 1:
             imageB.paste(fl_icon_b, (x,y),fl_icon_b)
             imageR.paste(fl_icon_r, (x,y),fl_icon_r)
@@ -359,9 +387,9 @@ def createDash():
         Tx = int(x + fl_icon.size[0]) + 4
         Ty = y
         if fl_icon_red == 1 and screen.use_red == 1:
-            draw_red.text((Tx,Ty),str(round(today_weather.feelslike,1))+"\N{DEGREE SIGN}" , font = SFWdetails_semibold, fill = black)
+            draw_red.text((Tx,Ty),feels_line_text , font = SFWdetails_semibold, fill = black)
         else:
-            draw_black.text((Tx,Ty),str(round(today_weather.feelslike,1))+"\N{DEGREE SIGN}" , font = SFWdetails_semibold, fill = black)
+            draw_black.text((Tx,Ty),feels_line_text , font = SFWdetails_semibold, fill = black)
 
 
         #Move in for the next icon using the w_icon_offset constant
@@ -376,6 +404,8 @@ def createDash():
             h_icon = Image.open(os.path.join(weatherdir, "h.png"))
         if today_weather.humidity > 70  :
             h_icon = Image.open(os.path.join(weatherdir, "h_high.png"))
+        if today_weather.icon == "EE":
+            today_weather.humidity = "-"
 
         imageB.paste(h_icon, (x,y),h_icon)
         Tx = int(x + h_icon.size[0]) + 4
@@ -388,26 +418,45 @@ def createDash():
         y = y + w_icon_row_height
 
         windkmh = (today_weather.wind*3600)/1000
+        wind_text = str(round(windkmh,1))+" km/h"
 
         w_icon = Image.open(os.path.join(weatherdir, "w.png"))
         if windkmh <= 10 :
             w_icon = Image.open(os.path.join(weatherdir, "w_low.png"))
+            wind_sev = 0
         if windkmh >10 and windkmh <= 25 :
             w_icon = Image.open(os.path.join(weatherdir, "w.png"))
+            wind_sev = 1
         if windkmh > 25  :
             w_icon = Image.open(os.path.join(weatherdir, "w_high.png"))
+            wind_sev = 3
+        w_text = today_weather.wind_conditions
 
         imageB.paste(w_icon, (x,y),w_icon)
         Tx = int(x + w_icon.size[0]) + 4
         Ty = y
-        draw_black.text((Tx,Ty),str(int(windkmh))+"km/h" , font = SFWdetails_semibold, fill = black)
+        draw_black.text((Tx,(Ty-6)),w_text , font = SFWdetails_semibold, fill = black)
+        if screen.use_red == 1:
+            if wind_sev == 0:
+                draw_black.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub, fill = black)
+            if wind_sev == 1:
+                draw_red.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub_bold, fill = black)
+            if wind_sev == 2:
+                draw_red.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub_bold, fill = black)
+        if screen.use_red == 0:
+            if wind_sev == 0:
+                draw_black.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub, fill = black)
+            if wind_sev == 1:
+                draw_black.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub_bold, fill = black)
+            if wind_sev == 2:
+                draw_black.text((Tx,(Ty+16)),wind_text, font = SFWdetails_sub_bold, fill = black)
 
         #Move in for the next icon using the w_icon_offset constant
         x = x + w_icon_offset
 
         #Load the umbrella icon
         if weather_error == 404:
-            popp = 0
+            popp = -1
         else:
             popp = int(today_forecast.pop * 100)
 
@@ -421,11 +470,13 @@ def createDash():
         Tx = int(x + rain_icon.size[0]) + 4
         Ty = y
 
+        if popp == -1:
+            draw_black.text((Tx,Ty),"No data" , font = SFWdetails_semibold, fill = black)
         if popp == 0:
             draw_black.text((Tx,Ty),"No rain" , font = SFWdetails_semibold, fill = black)
         if popp > 0:
             draw_black.text((Tx,(Ty-6)),str(popp)+"%" , font = SFWdetails_semibold, fill = black)
-            draw_black.text((Tx,(Ty+16)),str(round(today_forecast.rain['3h'],1))+"mm" , font = SFWdetails_sub, fill = black)
+            draw_black.text((Tx,(Ty+16)),str(round(today_forecast.rain,1))+"mm" , font = SFWdetails_sub, fill = black)
 
 
         #Move down one row using w_icon_row_height
@@ -444,6 +495,9 @@ def createDash():
         if today_weather.pressure > 1025  :
             p_icon = Image.open(os.path.join(weatherdir, "p_high.png"))
             p_text = "High"
+        if today_weather.icon == "EE":
+            p_text = "No Data"
+
 
         imageB.paste(p_icon, (x,y),p_icon)
         Tx = int(x + p_icon.size[0]) + 4
@@ -463,7 +517,6 @@ def createDash():
         s_icon = ssr_icon
         s_time = "--:--"
         red_sun = 0
-
         if hourglass.hour >= int(datetime.fromtimestamp(today_weather.sun_rise).strftime('%H')):
             s_icon = ss_icon
             s_time = sunset
@@ -472,15 +525,121 @@ def createDash():
             s_time = sunrise
             red_sun = 1
 
-        if screen.use_red == 1 and red_sun ==1 :
-            imageR.paste(s_icon, (x,y),s_icon)
+
+        # DEBUG AQI
+        # today_aqi = 120
+
+        aqi_number ="?"
+        aqi_icon_name = "AQI_badge.png"
+        aqi_sev = -1
+
+        if today_aqi.aqi_value == -1:
+            aqi_sev = -1
+            aqi_font = SFWAQI_bold
+        if today_aqi.aqi_value >= 10:
+            aqi_sev = 0
+            aqi_font = SFWAQI_bold
+            aqi_icon_name = "AQI_good.png"
+        if today_aqi.aqi_value > 10 and today_aqi.aqi_value <=50:
+            aqi_sev = 0
+            aqi_font = SFWAQI_bold
+            aqi_icon_name = "AQI_good.png"
+        if today_aqi.aqi_value > 50 and today_aqi.aqi_value <=80:
+            aqi_sev = 0
+            aqi_font = SFWAQI_bold
+            aqi_icon_name = "AQI_badge.png"
+        if today_aqi.aqi_value > 80 and today_aqi.aqi_value <=100:
+            aqi_sev = 1
+            aqi_icon_name = "AQI_badge.png"
+            aqi_font = SFWAQI_bold_small
+        if today_aqi.aqi_value > 100 and today_aqi.aqi_value <=150:
+            aqi_sev = 2
+            aqi_icon_name = "AQI_badge.png"
+            aqi_font = SFWAQI_bold_small
+        if today_aqi.aqi_value > 150 and today_aqi.aqi_value <=200:
+            aqi_sev = 3
+            aqi_icon_name = "AQI_badge.png"
+            aqi_font = SFWAQI_bold_small
+        if today_aqi.aqi_value > 200:
+            aqi_sev = 4
+            aqi_icon_name = "AQI_badge.png"
+            aqi_font = SFWAQI_bold_small
+
+        if today_aqi.aqi_value >0:
+            aqi_number = str(today_aqi.aqi_value)
+        a_g, a_g, aqi_w, aqi_h = draw_black.textbbox((0,0), aqi_number, font=aqi_font)
+
+        aqi_icon = Image.open(os.path.join(weatherdir,aqi_icon_name)) 
+        
+        if screen.use_red == 1 and aqi_sev > 0:
+            imageR.paste(aqi_icon, (x,y),aqi_icon)
         else:
+            imageB.paste(aqi_icon, (x,y),aqi_icon)
+
+
+        aqiw_m = x + int(aqi_icon.size[0]/2)
+        aqih_m = y + int(aqi_icon.size[1]/2)
+        ax = aqiw_m - int(aqi_w/2)
+        #Adjust Y axis based on screen
+
+        ay = y + int(aqi_h/4)
+        if aqi_sev < 1:
+            ay = ay - 4
+        else:
+            ay = ay + 3
+
+        if aqi_sev > 0:
+            # Print the AQI number inside the badge icon
+
+            if screen.use_red == 1 and aqi_sev > 0:
+                draw_red.text((ax,ay),aqi_number , font = aqi_font, fill = white)
+                draw_black.text((ax,ay),aqi_number , font = aqi_font, fill = black)
+
+        Tx = int(x + aqi_icon.size[0]) + 4
+        Ty = y +2
+        if aqi_sev > 0:
+            if screen.use_red == 1 and aqi_sev > 0:
+                draw_red.text((Tx,Ty),today_aqi.aqi_status , font = SFWdetails_semibold, fill = black)
+            else:
+                draw_black.text((Tx,Ty),today_aqi.aqi_status , font = SFWdetails_semibold, fill = black)
+        else :
+                #Print the AQI text and value below (like Rain), use the other icon. 
+                draw_black.text((Tx,Ty-6),today_aqi.aqi_status , font = SFWdetails_semibold, fill = black)
+                draw_black.text((Tx,Ty+16),"AQI ("+aqi_number+")" , font = SFWdetails_sub, fill = black)
+
+        trend_icon = False
+        if aqi_trend_ind == 0 :
+            trend_icon = Image.open(os.path.join(weatherdir,"aqi_trend_same.png"))
+            trendY = ay + (int(trend_icon.size[1]/2))
+
+        if aqi_trend_ind == 1 :
+            trend_icon = Image.open(os.path.join(weatherdir,"aqi_trend_up.png"))
+            trendY = ay
+
+        if aqi_trend_ind == -1 :
+            trend_icon = Image.open(os.path.join(weatherdir,"aqi_trend_down.png"))
+            trendY = ay + (int(trend_icon.size[1]))
+
+        if trend_icon :
+            trendX = int(ax - (trend_icon.size[0]+6))
+            imageB.paste(trend_icon, (trendX,trendY),trend_icon)
+
+
+        y = y + w_icon_row_height
+        tomorrow_y = y
+
+
+        '''
+        if screen.use_red == 1 and red_sun == 1 :
+            imageR.paste(s_icon, (x,y),s_icon)
+            print("Sun in red")
+        else: 
             imageB.paste(s_icon, (x,y),s_icon)
+            print("Sun in black")
         Tx = int(x + s_icon.size[0]) + 4
         Ty = y
         draw_black.text((Tx,Ty),s_time , font = SFWdetails_semibold, fill = black)
-
-
+        '''
 
     if dashboard.show_transit == 1:
 
@@ -507,9 +666,13 @@ def createDash():
         live_ind_B = Image.open(os.path.join(picdir, "transit_live_B.png"))
         live_ind_R = Image.open(os.path.join(picdir, "transit_live_R.png"))
         #live_ind = Image.open(os.path.join(picdir, "transit_live2.png"))
-        not_live_ind  = Image.open(os.path.join(picdir, "transit_not_live.png"))
+        not_live_ind  = Image.open(os.path.join(picdir, "transit_not_live2.png"))
         not_live_ind_B  = Image.open(os.path.join(picdir, "transit_not_live_B.png"))
         not_live_ind_R  = Image.open(os.path.join(picdir, "transit_not_live_R.png"))
+
+        live_ind_corner = Image.open(os.path.join(picdir, "transit_live_corner.png"))
+        not_live_ind_corner = Image.open(os.path.join(picdir, "transit_notlive_corner.png"))
+
         #Set the type of data indicator
         transit_ind = live_ind
         transit_ind_B = live_ind_B
@@ -583,7 +746,11 @@ def createDash():
             transit_ind_B = not_live_ind_B
             transit_ind_R = not_live_ind_R
 
-    
+        if live_transit_state == 1:
+            imageB.paste(live_ind_corner, ( int(ti1X+t_icon1.size[0]-4) , int(ti1Y -(live_ind_corner.size[1]/2)) ),live_ind_corner)
+        else :
+            imageB.paste(not_live_ind_corner, ( int(ti1X+t_icon1.size[0]-4) , int(ti1Y - (not_live_ind_corner.size[1]/2)) ),not_live_ind_corner)
+
     
         dep_cnt = len(get_transit_times1)
         dept_text = draw_black.textbbox((0, 0), "00:00", font=SFTransitTime)
@@ -598,11 +765,11 @@ def createDash():
 
             while bc < 3 :
                 draw_black.text((bx, by), get_transit_times1[bc], font=SFTransitTime, fill=black)
-                if live_transit_state == 0  and screen.use_red == 1:
-                    imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
-                    imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
-                else:
-                    imageB.paste(transit_ind,(blx,bly),transit_ind)
+                #if live_transit_state == 0  and screen.use_red == 1:
+                    #imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
+                    #imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
+                #else:
+                    #imageB.paste(transit_ind,(blx,bly),transit_ind)
                 bc = bc +1
                 by = by + (dept_text[3])
                 bly = bly + (dept_text[3])
@@ -632,6 +799,11 @@ def createDash():
 
         #Get departures for transit stop 2
 
+        if live_transit_state == 1:
+            imageB.paste(live_ind_corner, ( int(ti2X+t_icon2.size[0]-4) , int(ti2Y -(live_ind_corner.size[1]/2)) ),live_ind_corner)
+        else :
+            imageB.paste(not_live_ind_corner, ( int(ti2X+t_icon2.size[0]-4) , int(ti2Y - (not_live_ind_corner.size[1]/2)) ),not_live_ind_corner)
+
 
         dep_cnt = len(get_transit_times2)
         dept_text = draw_black.textbbox((0, 0), "00:00", font=SFTransitTime)
@@ -646,11 +818,11 @@ def createDash():
             
             while bc < 3 :
                 draw_black.text((bx, by), get_transit_times1[bc], font=SFTransitTime, fill=black)
-                if live_transit_state == 0 and screen.use_red == 1:
-                    imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
-                    imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
-                else:
-                    imageB.paste(transit_ind,(blx,bly),transit_ind)
+                #if live_transit_state == 0 and screen.use_red == 1:
+                    #imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
+                    #imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
+                #else:
+                    #imageB.paste(transit_ind,(blx,bly),transit_ind)
                 bc = bc +1
                 by = by + (dept_text[3])
                 bly = bly + (dept_text[3])
@@ -663,7 +835,7 @@ def createDash():
     
         #Drawing a line below weather and transit
         x = 10
-        y = 190
+        y = tomorrow_y
 
         draw_black.line([(x, y), (int(screen.width - (x*2)), y)], black)
 
@@ -686,7 +858,7 @@ def createDash():
         
             # Tomorrow's Weather string:
             fc_string = tomorrow_forecast.condition.capitalize()
-            tomorrow_string = fc_string+"   | H:"+str(round(tomorrow_forecast.temp_high,1))+"\N{DEGREE SIGN}"+" L:"+str(round(tomorrow_forecast.temp_low,1))+"\N{DEGREE SIGN}"
+            tomorrow_string = fc_string+" | H:"+str(round(tomorrow_forecast.temp_high,1))+"\N{DEGREE SIGN}"+" L:"+str(round(tomorrow_forecast.temp_low,1))+"\N{DEGREE SIGN}"
             popp = int(tomorrow_forecast.pop * 100)
             #DEBUG RAIN
             #popp = 2
@@ -700,7 +872,10 @@ def createDash():
                 draw_black.text((x,y),str(popp)+"%" , font = SFWdetails_semibold, fill = black)
                 t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),str(popp)+"%", font=SFWdetails_semibold)
                 x = x + int(test_t_w) + 2
-            imageB.paste(tomorrow_sunrise_icon, (x,(y+2)),tomorrow_sunrise_icon)
+            if screen.use_red == 1:
+                imageR.paste(tomorrow_sunrise_icon, (x,(y+2)),tomorrow_sunrise_icon)
+            else:
+                imageB.paste(tomorrow_sunrise_icon, (x,(y+2)),tomorrow_sunrise_icon)
             x = x + int(tomorrow_sunrise_icon.size[0]) +2
             draw_black.text((x,y),datetime.fromtimestamp(today_weather.sun_rise).strftime('%H:%M') , font = SFWdetails_semibold, fill = black)
             y = y + int(test_t_h) + 2
@@ -708,9 +883,32 @@ def createDash():
         else:
             y = y +1
         x = 10
+        screen_y = y
+
         draw_black.line([(x, y), (int(screen.width - (x*2)), y)], black)
     
-    if dashboard.show_quote == 1:
+
+
+    # MASK Section
+    if dashboard.show_weather_details == 1 and aqi_sev>0:
+        mask_icon = Image.open(os.path.join(picdir, "Mask.png"))
+        x = w_x
+        y = y + 4
+
+        imageB.paste(mask_icon, (x,y), mask_icon)
+
+        mtx = x + int(mask_icon.size[0]) + 8
+        mty = y + 4
+        mask_text = today_aqi.aqi_message
+        mask_g, mask_g, mask_w, mask_h = draw_black.textbbox((0,0),mask_text, font = SFReminder)
+        draw_black.text((mtx,mty),mask_text, font = SFReminder, fill=black)
+        y = y + int(mask_h) + 15
+        draw_black.line([(x, y), (int(screen.width - (x*2)), y)], black)
+        y = y + 6
+        screen_y = y
+
+
+
 
     # Quote Section
 
@@ -720,6 +918,7 @@ def createDash():
         ####     ####
         ####     #### 
             #######  ###
+    if dashboard.show_quote == 1:
 
         quote_icon = Image.open(os.path.join(picdir, "quote_icon.png"))
         quote_iconB = Image.open(os.path.join(picdir, "quote_b.png"))
@@ -760,7 +959,7 @@ def createDash():
             if qll > qml:
                 print("Quote Feature : Max attempts to get a short enough quote exhausted.")
                 #Just in case we could not find a short enough quote in 10 attempts.
-                dashboard.quote.quote_text = "Sorry, No short Quote found, please adjust the quote-of-the-day-max-lenght value"
+                dashboard.quote.quote_text = "Sorry, No short Quote found, please adjust the \nquote-of-the-day-max-lenght value"
                 dashboard.quote.quote_author = "Dashboard Ai"
             else :
                 addquotetofile("quotes.txt","quotes.txt",dashboard.quote.quote_text, dashboard.quote.quote_author)
@@ -771,7 +970,9 @@ def createDash():
         #print("Now trying to slice the text in chunks")
         text_g, text_g, test_t_w, test_t_h = draw_black.textbbox((0,0),dashboard.quote.quote_text, font=SFQuote)
         text_max = test_t_w
-        text_line_max = screen.quote_max
+        toff = x + int(quote_icon.size[0]+2)
+        text_line_max = screen.quote_max - (toff + screen.offset)
+
         text_line = []
         textbuffer = ""
 
@@ -843,16 +1044,105 @@ def createDash():
         
         qG, qG, q_w, q_h = draw_black.textbbox((0,0),"- "+dashboard.quote.quote_author, font=SFQuote)
         gTx = int(screen.middle_w) - int(q_w/2)
-        #gTy = gTy + 4
+        gTy = gTy -2
         if screen.use_red == 1:
             draw_red.text((gTx, gTy), "- "+dashboard.quote.quote_author, font=SFQuoteAuthor, fill=black)
         else :
             draw_black.text((gTx, gTy), "- "+dashboard.quote.quote_author, font=SFQuoteAuthor, fill=black)
-        gTy = gTy + int(q_h) + 4
+        gTy = gTy + int(q_h) + 2
+        screen_y = gTy
 
         ###########################
         # End of Quote of the day
         ###########################
+    if dashboard.show_todo == 1 :
+
+        print("geting todoist list")
+        todo_icon = Image.open(os.path.join(picdir, "tasks_icon.png"))
+        todo_icon_B = Image.open(os.path.join(picdir, "tasks_iconB.png"))
+        todo_icon_R = Image.open(os.path.join(picdir, "tasks_iconR.png"))
+        todo_mini_icon  = Image.open(os.path.join(picdir, "todo_mini.png"))
+        x = w_x
+        y = screen_y
+        
+        draw_black.line([(x, y), (int(screen.width - (x*2)), y)], black)
+
+        qx = w_x
+        qy = screen_y + 4
+
+        #Show the todo icon status
+        if screen.use_red == 1:
+            imageB.paste(todo_icon_B,(qx,qy),todo_icon_B)
+            imageR.paste(todo_icon_R,(qx,qy),todo_icon_R)
+        else:
+            imageB.paste(todo_icon,(qx,qy),todo_icon)
+        gTy = qy + 14
+        gTx = x + int(todo_icon.size[0]+5)
+        gTTop = gTy
+        gTTy = int(qy + todo_icon.size[1] + 5)
+        tg, tg, td_w, tdrow_h = draw_black.textbbox((0,0),"adjGgTsK", font=SFToDo)
+        tg, tg, td_w_s, tdrow_h_s = draw_black.textbbox((0,0),",adjGgTsK", font=SFToDo_sub)
+        daymonth = datetime.today().strftime("%d%m")
+
+
+        if dashboard.todo_filter == "TODAY":
+            print("Getting only todo's due today...")
+            show_dude_date = False
+            today_todo_list = getodolistbyduedate(datetime.now())
+        else:
+            print("Getting all todos due")
+            show_dude_date = True
+            today_todo_list = gettodolist()
+        numtodos = len(today_todo_list)
+        print("Got "+str(numtodos)+" tasks to show")
+        tnum = 0
+        tdrow = 0
+        col_space = 0
+        if numtodos > 0:
+            today_todo_list.sort(key=lambda x: x.due_date, reverse=True) # Sort by Due date
+            for tsk in today_todo_list:
+                #tsk_title = "\u25E6"+tsk.content.replace('\n', '') # Shows a circle in front of text
+                tsk_title = tsk.content.replace('\n', '')
+                tg, tg, td_w, td_h = draw_black.textbbox((0,0),tsk_title, font=SFToDo)
+                if int(td_w + (todo_mini_icon.size[0]*2)) > col_space:
+                    col_space = int(td_w + (todo_mini_icon.size[0]*2))
+                if int(gTx + col_space) >= int(screen.width - 5):
+                    print("No more space for tasks...")
+                    break
+                imageB.paste(todo_mini_icon,(gTx, gTy),todo_mini_icon)
+                draw_black.text((int(gTx+todo_mini_icon.size[0]+2), int(gTy - todo_mini_icon.size[1]/3)), tsk_title, font=SFToDo, fill=black)
+                if show_dude_date and tsk.due_date:
+                    due_daymonth = tsk.due_date.strftime("%d%m")
+                    if due_daymonth == daymonth:
+                        due_date_text = "Today"
+                    else:
+                        due_date_text = tsk.due_date.strftime("%A, %b %-d")
+                    gTy = gTy + tdrow_h_s
+                    
+                    draw_black.text((int(gTx+todo_mini_icon.size[0]+8), int(gTy - todo_mini_icon.size[1]/3)), due_date_text, font=SFToDo_sub, fill=black)
+                gTy = gTy + tdrow_h
+                if gTy > gTTy:
+                    gTTy = gTy
+                tdrow +=1
+                if tdrow == dashboard.todo_rows:
+                    gTx = gTx + col_space
+                    gTy = gTTop
+                    col_space = 0
+                    tdrow = 0
+        else:
+            todo_text = "All tasks are done!"
+            tg, tg, t_w, t_h = draw_black.textbbox((0,0),todo_text, font=SFToDo)
+            x = int(screen.middle_w - (t_w/2))
+            y = gTy
+            draw_black.text((x,y), todo_text, font=SFToDo, fill=black)
+  
+
+        if gTy > gTTy:
+            screen_y = int(gTy)
+        else:
+            screen_y = gTTy
+    else:
+        print("Not showing todoist list")
 
             ############
     ############################
@@ -878,7 +1168,7 @@ def createDash():
 
     garbage_collection_hour = int(garbage_vars['all-collection-time-over-id'])
     comparetime = hourglass.evening_hour
-    
+    gTy = screen_y
     gTx = 10
     gYincr = 6
     gx = 50
@@ -906,19 +1196,29 @@ def createDash():
         if hourglass.curenttime <= comparetime:
             print("get ready for the truck!")
             g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Truck.png'))
-            g_string = garbage_vars['all-garbage-time-message-today-id']
+            g_string = garbage_vars['all-garbage-time-message-today-id']+ " "
             g_sub_sting = garbage_vars['all-garbage-collect-message-id']
+
             if g_data.landfill == 1:
-                g_string = g_string + " "+garbage_vars['landfill_title-id']
+                g_string = g_string + garbage_vars['landfill_title-id']
             if g_data.recycle == 1:
-                g_string = g_string + " & "+garbage_vars['recycle_title-id']
+                if g_data.landfill == 1:
+                    g_string = g_string + " & "
+                g_string = g_string + garbage_vars['recycle_title-id']
             if g_data.compost == 1:
-                g_string = g_string + " & "+garbage_vars['compost_title-id']
+                if g_data.recycle == 1:
+                    g_string = g_string + " & "
+                g_string = g_string + garbage_vars['compost_title-id']
             if g_data.dumpster == 1:
-                g_string = g_string + " & "+garbage_vars['dumpster_title-id']
+                if g_data.compost == 1:
+                    g_string = g_string + " & "
+                g_string = g_string + garbage_vars['dumpster_title-id']
             if g_data.xmas_tree == 1:
-                g_string = g_string + " & "+garbage_vars['holiday-tree-schedule_title-id']
-                g_string = g_string + " " + garbage_vars['all-garbage-time-message-end-id']
+                if g_data.dumpster == 1:
+                    g_string = g_string + " & "
+                g_string = g_string + garbage_vars['holiday-tree-schedule_title-id']
+            g_string = g_string + " " + garbage_vars['all-garbage-time-message-end-id']
+
         else:
             print("Time to take the bins back in")
             g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Garage.png'))
@@ -927,7 +1227,7 @@ def createDash():
         #print("Now trying to slice the text in chunks")
         t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=SFReminder)
         text_max = test_t_w
-        text_line_max = screen.reminder_max
+        text_line_max = screen.reminder_max  - gTx
         text_line = []
         textbuffer = ""
         #Split the quote into words in an array
@@ -1018,21 +1318,27 @@ def createDash():
         gTx = gTx + int( cal_todo_icon.size[0] + 8 )
         gTy = gTy - 8
         #Build the garbage schedule reminder string
-        g_string = garbage_vars['all-garbage-time-message-tomorrow-id']
+        g_string = garbage_vars['all-garbage-time-message-tomorrow-id'] + " "
         if g_data.landfill_prepapre == 1:
             g_string = g_string + " "+garbage_vars['landfill_title-id']
         if g_data.recycle_prepare == 1:
-            g_string = g_string + " & "+garbage_vars['recycle_title-id']
+            if g_data.landfill_prepapre == 1:
+                g_string = g_string + " & "
+            g_string = g_string + garbage_vars['recycle_title-id']
         if g_data.compost_prepare == 1:
-            g_string = g_string + " & "+garbage_vars['compost_title-id']
+            if g_data.recycle_prepare == 1:
+                g_string = g_string + " & "
+            g_string = g_string + garbage_vars['compost_title-id']
         if g_data.dumpster_prepapre == 1:
-            g_string = g_string + " & "+garbage_vars['dumpster_title-id']
+            if g_data.compost_prepare == 1:
+                g_string = g_string + " & "
+            g_string = g_string + garbage_vars['dumpster_title-id']
         g_string = g_string + " " + garbage_vars['all-garbage-time-message-end-id']
 
         #print("Now trying to slice the text in chunks")
         t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=SFReminder)
         text_max = test_t_w
-        text_line_max = screen.reminder_max
+        text_line_max = screen.reminder_max - gTx
         text_line = []
         textbuffer = ""
         #Split the quote into words in an array
@@ -1147,12 +1453,18 @@ def get_dashboard_config_data(file_path:str):
     data['refresh-rate-min-id'] = parser.get("screen-config", "refresh-rate-min")
     data['screen_sleep_hour-id'] = parser.get("screen-config", "screen_sleep_hour")
     data['screen_wake_hour-id'] = parser.get("screen-config", "screen_wake_hour")
+    data['evening_hour-id'] = parser.get("screen-config", "evening_hour")
 
 
     data['show_weather-id'] = parser.get("feature-config", "show_weather")
     data['show_weather_details-id'] = parser.get("feature-config", "show_weather_details")
     data['show_transit-id'] = parser.get("feature-config", "show_transit")
     data['show_quote-id'] = parser.get("feature-config", "show_quote")
+    data['show-todo-id'] = parser.get("feature-config", "show-todo")
+    data['todo-rows-id'] = parser.get("feature-config", "todo-rows")
+    data['todo-filter-id'] = parser.get("feature-config", "todo-filter")
+    data['show-garbage-id'] = parser.get("feature-config", "show-garbage")
+
     return data
 
 def get_garbage_config_data(file_path:str):
@@ -1191,6 +1503,12 @@ def get_garbage_config_data(file_path:str):
 def sleep_screen(wake_date:date):
     print("Sleeping screen initiated")
     SleepFont = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",32)
+    SleepFont_foot = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",24)
+    SFWdetails_semibold = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",22)
+    black = 'rgb(0,0,0)'
+    white = 'rgb(255,255,255)'
+
+
     try:
 
         epd = epd7in5b_V2.EPD()
@@ -1211,16 +1529,68 @@ def sleep_screen(wake_date:date):
     imageR = Image.new('L', (epd.width, epd.height), 255)  # 255: clear the frame
     draw_black = ImageDraw.Draw(imageB)
 
+    #  #  # ######   ##   ##### #    # ###### #####  
+    #  #  # #       #  #    #   #    # #      #    # 
+    #  #  # #####  #    #   #   ###### #####  #    # 
+    #  #  # #      ######   #   #    # #      #####  
+     ## ##  ###### #    #   #   #    # ###### #    # 
+ 
+    if dashboard.show_weather == 1:
+        forecast_weather = tomorrow_weather()
+        tomorrow_forecast = forecast_weather[1]
+        tmr_g, tmr_g, tmr_w, tmr_h = draw_black.textbbox((0,0),"Tomorrow: ", font=SFWdetails_semibold)
+        x = 10
+        y = int(tmr_h)
+        draw_black.text((x,y),"Tomorrow: ", font = SFWdetails_semibold, fill = black)
+        t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),"Tomorrow :", font=SFWdetails_semibold)
+        x = int(x + test_t_w)
+
+        # Tomorrows Weahter Icon:      
+        tomorrow_cond_icon = Image.open(os.path.join(weatherdir, tomorrow_forecast.icon+'.png'))
+        tomorrow_cond_icon = tomorrow_cond_icon.resize((int(tomorrow_cond_icon.size[0] /2.5), int(tomorrow_cond_icon.size[1] / 2.5)))
+        tomorrow_pop_icon = Image.open(os.path.join(weatherdir, 'rain.png'))
+        tomorrow_pop_icon = tomorrow_pop_icon.resize((int(tomorrow_pop_icon.size[0] /1.5), int(tomorrow_pop_icon.size[1] / 1.5)))
+        tomorrow_sunrise_icon = Image.open(os.path.join(weatherdir, 'SunRise.png'))
+        tomorrow_sunrise_icon = tomorrow_sunrise_icon.resize((int(tomorrow_sunrise_icon.size[0] /1.5), int(tomorrow_sunrise_icon.size[1] / 1.5)))
+        imageB.paste(tomorrow_cond_icon, (x,(y+1)),tomorrow_cond_icon)
+        x = x + int(tomorrow_cond_icon.size[0]+ 4)
+        # Tomorrow's Weather string:
+        fc_string = tomorrow_forecast.condition.capitalize()
+        tomorrow_string = fc_string+" | H:"+str(round(tomorrow_forecast.temp_high,1))+"\N{DEGREE SIGN}"+" L:"+str(round(tomorrow_forecast.temp_low,1))+"\N{DEGREE SIGN}, feels like "+str(round(tomorrow_forecast.feels_like,1))+"\N{DEGREE SIGN}"
+        popp = int(tomorrow_forecast.pop * 100)
+        draw_black.text((x,y),tomorrow_string , font = SFWdetails_semibold, fill = black)
+        t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),tomorrow_string, font=SFWdetails_semibold)
+        x = x + test_t_w + 2
+        if popp > 0:
+            imageB.paste(tomorrow_pop_icon, (x,(y+3)),tomorrow_pop_icon)
+            x = x + int(tomorrow_pop_icon.size[0]) + 2
+            draw_black.text((x,y),str(popp)+"%" , font = SFWdetails_semibold, fill = black)
+            t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),str(popp)+"%", font=SFWdetails_semibold)
+            x = x + int(test_t_w) + 2
+
     sleep_icon = Image.open(os.path.join(picdir, 'sleep_icon.png'))
+
+    sleep_string = "Good Night..."
+    t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),sleep_string, font=SleepFont)
+
     sX = int(screen.middle_w) - int(sleep_icon.size[0]/2)
     sY = int(screen.middle_h) - int(sleep_icon.size[1]/2)
+    sY = sY - int(test_t_h)
     imageB.paste(sleep_icon, (sX,sY), sleep_icon)
 
-    sleep_string = "Good Night, see you tomorrow at "+str(screen.wake_hour)
-    t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),sleep_string, font=SleepFont)
+
+
     sX = int(screen.middle_w) - int(test_t_w/2)
     sY = int(sY + sleep_icon.size[1]) + 4
     draw_black.text((sX, sY), sleep_string, font = SleepFont, fill = 'rgb(0,0,0)')
+
+
+
+    sleep_string = "Screen will wakeup tomorrow at "+str(screen.wake_hour)+", sleep well!"
+    t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),sleep_string, font=SleepFont_foot)
+    sX = int(screen.width - (int(test_t_w) + 5))
+    sY = int(screen.height - (int(test_t_h) + 5))
+    draw_black.text((sX, sY), sleep_string, font = SleepFont_foot, fill = 'rgb(0,0,0)')
 
     epd.display(epd.getbuffer(imageB),epd.getbuffer(imageR))
     epd.sleep()
@@ -1237,6 +1607,11 @@ def sleep_screen(wake_date:date):
 
 
 def main():
+    try:
+        performance.cli = sys.argv[1]
+    except:
+        performance.cli = ""
+
     hourglass.day = 0
     screen.clean_screen = 0
     trend = 0
@@ -1248,9 +1623,8 @@ def main():
     screen.refresh_rate_min = int(dash_config['refresh-rate-min-id'])
     screen.sleep_hour = int(dash_config['screen_sleep_hour-id'])
     screen.wake_hour = int(dash_config['screen_wake_hour-id'])
-    #screen.sleep_hour = 16
-    hourglass.evening_hour = 18
-
+    hourglass.evening_hour = int(dash_config['evening_hour-id'])
+    print("Evening hour is set to: "+str(hourglass.evening_hour))
     print("Initial used RAM is: "+str(performance.usedram))
     while True :
         print("Screen sleep at: "+str(screen.sleep_hour))

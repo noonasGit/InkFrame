@@ -12,11 +12,13 @@ from datetime import datetime, timedelta
 @dataclass
 class weather_forecast:
     date: int
+    temperature: float
     temp_low: float
     temp_high: float
     feels_like : float
     condition: str
     pop : int
+    total_pop :int
     rain : dict
     snow : dict
     # icon's path
@@ -32,12 +34,26 @@ class weather_current:
     pressure: float
     humidity: float
     wind: float
+    wind_conditions : str
     condition: str
     desciption: str
     icon: str
     sun_rise: int
     sun_set : int
     error : int
+
+@dataclass
+class air_current:
+    aqi: int
+    co: float
+    no: float
+    no2: float
+    o3: float
+    so2: float
+    pm2_5: float
+    pm10: float
+    nh3: float
+
 
 def get_weather_config_data(file_path:str):
     parser = configparser.ConfigParser()
@@ -71,6 +87,7 @@ def current_weather():
     #print("URL Constructed...")
     #print(url)
     api_error = ""
+    werror = 0
     print("Connecting to Weather API, current weather...")
     
     for attempt in range(2):
@@ -79,14 +96,23 @@ def current_weather():
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed {}".format(e))
+            print("API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
+            werror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
+    try:
+        url_resp=rawresponse.ok
+        url_reason=rawresponse.reason
+    except:
+        url_resp=False
+        url_reason="Unknown"
+
+    
     #print(rawresponse.ok)   
 
     #print(rawresponse.text)
 
-    if rawresponse.ok == True:
+    if werror == 0 and url_resp==True:
         return_data = []
         json_data = rawresponse.json()
         for i in json_data['weather']:
@@ -103,6 +129,20 @@ def current_weather():
             weather_current.pressure = json_data['main']['pressure']
             weather_current.humidity = json_data['main']['humidity']
             weather_current.wind = json_data['wind']['speed']
+            w_text = ""
+            if weather_current.wind <= 5 :
+                w_text = "Still wind"
+            if weather_current.wind >5 and weather_current.wind <= 10 :
+                w_text = "Calm wind"
+            if weather_current.wind >10 and weather_current.wind <= 25 :
+                w_text = "Gusts"
+            if weather_current.wind >25 and weather_current.wind <= 80 :
+                w_text = "Winds"
+            if weather_current.wind >80 and weather_current.wind <= 120 :
+                w_text = "Storms"
+            if weather_current.wind >120:
+                w_text = "Hurricane"
+            weather_current.wind_conditions = w_text
             #weather_current.wind_gust = json_data['wind']['gust']
             weather_current.city = json_data['name']
             weather_current.sun_rise = json_data['sys']['sunrise']
@@ -116,6 +156,7 @@ def current_weather():
                                    pressure=weather_current.pressure,
                                    humidity=weather_current.humidity,
                                    wind=weather_current.wind,
+                                   wind_conditions=weather_current.wind_conditions,
                                    condition=weather_current.condition,
                                    desciption=weather_current.desciption,
                                    sun_rise=weather_current.sun_rise,
@@ -126,14 +167,9 @@ def current_weather():
 
         return return_data
     else:
-        print("Error gettin data from Transi API, "+rawresponse.reason)
-        if rawresponse.reason == "Unauthorized" :
-            print("API KEY ISSUE!!")
-            print("Please ensure you have entered a correct API key for transit in the openweather.ini file")
-            print("####################################################################################")
-            print(api_error)
-            connection_error = 404
-            return_data = weather_current(city="Error",
+        print("Error gettin data from OpenMapWeather API, "+url_reason)
+        connection_error = 404
+        return_data = weather_current(city="Error",
                           temperature=0,
                           temp_high=0,
                           temp_low=0,
@@ -141,12 +177,21 @@ def current_weather():
                           pressure=0,
                           humidity=0,
                           wind=0,
-                          condition="Error",
-                          desciption="Error",
+                          wind_conditions="No data",
+                          condition="No Data",
+                          desciption="No Data",
                           sun_rise=0,
                           sun_set=0,
                           error=connection_error,
                           icon="EE")
+
+        if werror != 0:
+            if url_reason == "Unauthorized" :
+                print("Error gettin data from OpenMapWeather API, "+url_reason)
+                print("API KEY ISSUE!!")
+                print("Please ensure you have entered a correct API key for Weather in the openweather.ini file")
+                print("####################################################################################")
+                print(api_error)
         return return_data
 
 
@@ -172,21 +217,30 @@ def get_forecast(numbdays:int):
     #print(url)
     api_error = ""
     print("Connecting to Weather API, forecast...")
-    
+    werror = 0
     for attempt in range(2):
         try:
             rawresponse = requests.get(url)
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed {}".format(e))
+            print("API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
+            werror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
+    try:
+        url_resp=rawresponse.ok
+        url_reason=rawresponse.reason
+    except:
+        url_resp=False
+        url_reason="Unknown"
+
+
     #print(rawresponse.ok)   
 
     #print(rawresponse.text)
 
-    if rawresponse.ok == True:
+    if werror == 0 and url_resp==True:
         return_data = []
         json_data = rawresponse.json()
         for i in json_data['list']:
@@ -199,33 +253,18 @@ def get_forecast(numbdays:int):
             weather_forecast.pop = i['pop']
             weather_forecast.icon = i['weather'][0]['icon']
             try :
-                weather_forecast.rain = i['rain']
+                weather_forecast.rain = i['rain']['3h']
                 #print(i['rain'])
                 #print(weather_forecast.rain['3h'])
             except:
-                weather_forecast.rain = {'3h': 0}
+                weather_forecast.rain = 0
             try :
-                weather_forecast.snow =i['snow']
+                weather_forecast.snow =i['snow']['3h']
                 #print(i['snow'])
             except:
-                weather_forecast.snow = {'3h': 0}
+                weather_forecast.snow = 0
 
-            #print(i)
             dayofweather = weather_forecast.date
-            print("Date: "+dayofweather.strftime("%b, %d"))
-            print(i['dt_txt'])
-            print(weather_forecast.date)
-            print(weather_forecast.temp_high)
-            print(weather_forecast.temp_low)
-            print(weather_forecast.feels_like)
-            print(weather_forecast.condition)
-            print(weather_forecast.pop)
-            print(weather_forecast.rain)
-            print(weather_forecast.snow)
-            print(weather_forecast.icon)
-
-            
-
             return_data.append(weather_forecast(temp_high=weather_forecast.temp_high,
                                 temp_low=weather_forecast.temp_low,
                                 feels_like=weather_forecast.feels_like,
@@ -235,32 +274,36 @@ def get_forecast(numbdays:int):
                                 snow=weather_forecast.snow,
                                 icon=weather_forecast.icon,
                                 date=weather_forecast.date))
-
-
         return return_data
     else:
-        print("Error gettin data from Transi API, "+rawresponse.reason)
-        if rawresponse.reason == "Unauthorized" :
-            print("API KEY ISSUE!!")
-            print("Please ensure you have entered a correct API key for transit in the openweather.ini file")
-            print("####################################################################################")
-            print(api_error)
-            return_data.append(weather_forecast(temp_high=0,
-                        temp_low=0,
-                        feels_like=0,
-                        condition="Error",
-                        pop=0,
-                        rain=0,
-                        snow=0,
-                        icon="EE",
-                        date=datetime.now()))
-
+        print("Error getting forecast: "+url_reason)
+        return_data=[]
+        return_data.append(weather_forecast(temp_high=0,
+                            temp_low=0,
+                            feels_like=0,
+                            condition="Error",
+                            pop=0,
+                            rain={'3h': 0},
+                            snow={'3h': 0},
+                            icon="EE",
+                            date=datetime.now()))
+        if werror != 0:
+            if url_reason == "Unauthorized" :
+                print("Error gettin data from OpenMapWeather API, "+url_reason)
+                print("API KEY ISSUE!!")
+                print("Please ensure you have entered a correct API key for Weather in the openweather.ini file")
+                print("####################################################################################")
+                print(api_error)
         return return_data
 
 def tomorrow_weather():
     day_offset = 0
     tomorrow_day = datetime.now() + timedelta(days=day_offset)
-    tomorrow_ref = int(tomorrow_day.strftime("%d"))
+    tomorrow_ref = tomorrow_day.date()
+    weather_forecast.total_pop = 0
+    #print("tomorrow_day "+str(tomorrow_day))
+    #print("tomorrow_ref "+str(tomorrow_ref))
+
     weather_config = dict()
     weather_config = get_weather_config_data("openweather.ini")
 
@@ -280,7 +323,8 @@ def tomorrow_weather():
     #print("URL Constructed...")
     #print(url)
     api_error = ""
-    print("Connecting to Weather API, forecast...")
+    werror = 0
+    print("Connecting to Weather API, forecast, one second...")
     
     for attempt in range(2):
         try:
@@ -288,30 +332,43 @@ def tomorrow_weather():
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed {}".format(e))
+            print("API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
+            werror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
-    #print(rawresponse.ok)   
+    
+    try:
+        url_resp=rawresponse.ok
+        url_reason=rawresponse.reason
+        #print(url_resp)
+        #print(url_reason)
+    except:
+        url_resp=False
+        url_reason="Unknown"
+        print("We have an issue with forecasts")
 
-    #print(rawresponse.text)
-
-    if rawresponse.ok == True:
+    if werror == 0 and url_resp==True:
         json_data = rawresponse.json()
         for i in json_data['list']:
-            tomorrow_check = int(datetime.utcfromtimestamp(i['dt']).strftime("%d"))
+            tomorrow_check = datetime.utcfromtimestamp(i['dt'])
+            tomorrow_check = tomorrow_check.date()
             #print("tomorrow check "+str(tomorrow_check))
             #print("tomorrow ref "+str(tomorrow_ref))
             #print(i['dt'])
+            #print(datetime.utcfromtimestamp(i['dt']))
+            #print(i['pop'])
+            if i['pop'] > weather_forecast.total_pop:
+                weather_forecast.total_pop = i['pop']
+                #print("now at "+str(weather_forecast.total_pop))
             if tomorrow_check >= tomorrow_ref :
                 #print("Next day")
                 day_offset +=1
 
                 tomorrow_day = datetime.now() + timedelta(days=day_offset)
-                tomorrow_ref = int(tomorrow_day.strftime("%d"))
-
+                tomorrow_ref = tomorrow_day.date()
 
                 weather_forecast.date = datetime.utcfromtimestamp(i['dt'])
-            
+                weather_forecast.temperature = i['main']['temp']
                 weather_forecast.temp_high = i['main']['temp_max']
                 weather_forecast.temp_low = i['main']['temp_min']
                 weather_forecast.feels_like = i['main']['feels_like']
@@ -319,62 +376,155 @@ def tomorrow_weather():
                 weather_forecast.icon = i['weather'][0]['icon']
                 weather_forecast.pop = i['pop']
                 
-                
                 try :
-                    weather_forecast.rain = i['rain']
+                    weather_forecast.rain = i['rain']['3h']
                     #print(i['rain'])
-                    #print(weather_forecast.rain['3h'])
+                    #print("Rain"+str(weather_forecast.rain))
                 except:
-                    weather_forecast.rain = {'3h': 0}
+                    weather_forecast.rain = 0
                 try :
-                    weather_forecast.snow =i['snow']
+                    weather_forecast.snow =i['snow']['3h']
                     #print(i['snow'])
                 except:
-                    weather_forecast.snow = {'3h': 0}
-
-                #print(i)
-                #dayofweather = weather_forecast.date
-                #print("Date: "+dayofweather.strftime("%b, %d"))
-                #print(i['dt_txt'])
-                #print(weather_forecast.date)
-                #print(weather_forecast.temp_high)
-                #print(weather_forecast.temp_low)
-                #print(weather_forecast.feels_like)
-                #print(weather_forecast.condition)
-                #print(weather_forecast.icon)
-
-
-
-            
+                    weather_forecast.snow = 0
 
                 return_data.append(weather_forecast(date=weather_forecast.date,
+                                        temperature=weather_forecast.temperature,
                                         temp_high=weather_forecast.temp_high,
                                         temp_low=weather_forecast.temp_low,
                                         feels_like=weather_forecast.feels_like,
                                         condition=weather_forecast.condition,
                                         pop=weather_forecast.pop,
+                                        total_pop = weather_forecast.total_pop,
                                         rain=weather_forecast.rain,
                                         snow=weather_forecast.snow,
                                         icon=weather_forecast.icon))
-            
-
-
+                
         return return_data
     else:
-        print("Error gettin data from Transi API, "+rawresponse.reason)
-        if rawresponse.reason == "Unauthorized" :
-            print("API KEY ISSUE!!")
-            print("Please ensure you have entered a correct API key for transit in the openweather.ini file")
-            print("####################################################################################")
-            print(api_error)
-            return_data.append(weather_forecast(temp_high=0,
-                    temp_low=0,
-                    feels_like=0,
-                    condition="Error",
-                    pop=0,
-                    rain=0,
-                    snow=0,
-                    icon="EE",
-                    date=datetime.now()))
+        print("Error forecast "+url_reason)
+        print("Buffering with error data...")
+        return_data.append(weather_forecast(date=datetime.now(),
+                temperature=0,
+                temp_high=0,
+                temp_low=0,
+                feels_like=0,
+                condition="ERROR",
+                pop=0,
+                total_pop=0,
+                rain=0,
+                snow=0,
+                icon="EE"))
+        #Add second entry for next day.
+        return_data.append(weather_forecast(date=datetime.now()+timedelta(days=1),
+                temperature=0,
+                temp_high=0,
+                temp_low=0,
+                feels_like=0,
+                condition="ERROR",
+                pop=0,
+                total_pop=0,
+                rain=0,
+                snow=0,
+                icon="EE"))
+        if werror != 0:
+            if url_reason == "Unauthorized" :
+                print("Error gettin data from OpenMapWeather API, "+url_reason)
+                print("API KEY ISSUE!!")
+                print("Please ensure you have entered a correct API key for Weather in the openweather.ini file")
+                print("####################################################################################")
+                print(api_error)
+        return return_data
 
+def get_air_levels():
+    connection_error = 0
+    weather_config = dict()
+    weather_config = get_weather_config_data("openweather.ini")
+
+
+    base_url = "http://api.openweathermap.org/data/2.5/air_pollution"
+    apikey = "appid="+weather_config['api-key-id']
+    lat = "lat="+weather_config['lat-id']
+    lon = "lon="+weather_config['lon-id']
+    
+
+
+    #Construct the entire request URL
+    url = base_url+"?"+apikey+"&"+lat+"&"+lon
+    #print("URL Constructed...")
+    #print(url)
+    api_error = ""
+    werror = 0
+
+    print("Connecting to Weather API, current air pollutants...")
+    #print(url)
+
+
+    for attempt in range(2):
+        try:
+            rawresponse = requests.get(url)
+            break  # If the requests succeeds break out of the loop
+        except RequestException as e:
+            api_error = format(e)
+            print("API call failed, attempt "+str(attempt))
+            time.sleep(2 ** attempt)
+            werror = -3
+            continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
+    try:
+        url_resp=rawresponse.ok
+        url_reason=rawresponse.reason
+    except:
+        url_resp=False
+        url_reason="Unknown"
+
+    #print(rawresponse.ok)   
+
+    #print(rawresponse.text)
+
+    if werror == 0 and url_resp == True:
+        return_data = []
+        json_data = rawresponse.json()
+        for i in json_data['list']:
+            air_current.aqi = i['main']['aqi']
+            air_current.co = i['components']['co']
+            air_current.no = i['components']['no']
+            air_current.no2 = i['components']['no2']
+            air_current.o3 = i['components']['o3']
+            air_current.so2 = i['components']['so2']
+            air_current.pm2_5 = i['components']['pm2_5']
+            air_current.pm10 = i['components']['pm10']
+            air_current.nh3 = i['components']['nh3']
+
+            
+
+            return_data = air_current(aqi=air_current.aqi,
+                                   co=air_current.co,
+                                   no=air_current.no,
+                                   no2=air_current.no2,
+                                   o3=air_current.o3,
+                                   so2=air_current.so2,
+                                   pm2_5=air_current.pm2_5,
+                                   pm10=air_current.pm10,
+                                   nh3=air_current.nh3)
+        return return_data
+    else:
+        print("Error gettin data from OpenMapWeather API, "+url_reason)
+        return_data = air_current(aqi=-1,
+                                   co=-1,
+                                   no=-1,
+                                   no2=-1,
+                                   o3=-1,
+                                   so2=-1,
+                                   pm2_5=-1,
+                                   pm10=-1,
+                                   nh3=-1)
+
+        if werror != 0:
+            if url_reason == "Unauthorized" :
+                print("Error gettin data from OpenMapWeather API, "+rawresponse.reason)
+                print("API KEY ISSUE!!")
+                print("Please ensure you have entered a correct API key for Weather in the openweather.ini file")
+                print("####################################################################################")
+                print(api_error)
+                connection_error = 404
         return return_data

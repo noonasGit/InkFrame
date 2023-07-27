@@ -1,12 +1,20 @@
-from openweather import current_weather, get_forecast, tomorrow_weather
+from openweather import current_weather, get_forecast, tomorrow_weather, get_air_levels
 from datetime import date, datetime
+
+#today_air = get_air_levels()
+#print("AQI: "+str(today_air.aqi))
+
+
+
 
 today_weather = current_weather()
 if today_weather.error == 404:
     print("Error Getting weather...")
 
 tomorrow_w = tomorrow_weather()
+print(str(len(tomorrow_w)))
 tomorrows_weather = tomorrow_w[0]
+#fcast=get_forecast(2)
 
 print("City: "+today_weather.city)
 print("Condition: "+today_weather.condition)
@@ -56,8 +64,8 @@ if len(tomorrow_w) > 0 :
         if len(tomorrow_w) >= 1:
             print("---")
     
-    if today_weather.error == 404:
-        print("Error Getting rain")
+    if len(tomorrow_w) == 1:
+        print("Not enough weather")
     else:
         next_day = tomorrow_w[1]
         print(next_day.date)
@@ -70,4 +78,3 @@ if len(tomorrow_w) > 0 :
             print("Rain: "+str(next_day.rain['3h'])+" mm")
         if next_day.snow['3h'] > 0:
             print("Snow: "+str(next_day.snow['3h'])+" mm")
-    
