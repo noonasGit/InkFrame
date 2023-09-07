@@ -12,7 +12,7 @@ import time
 class quote_summary:
     quote_text: str
     quote_author :str
-'''
+
 def quoteoftheday():
     quote_data = ""
     try:
@@ -33,7 +33,6 @@ def quoteoftheday():
         quote_data = quote_summary(quote_text, quote_author)
 
     return quote_data    
-'''
 
 def quotefromfile(file_path:str):
     if os.path.exists(file_path) :
@@ -41,18 +40,18 @@ def quotefromfile(file_path:str):
         with open(file_path) as my_file:
             for line in my_file:
                 quote_array.append(line)
-        #print(str(len(quote_array))+" quotes loaded...")
+        print(str(len(quote_array))+" quotes loaded...")
         ql = len(quote_array)
         qr_n = random.randint(0,(ql-1))
-        quote_text = quote_array[qr_n].split("@")[0].replace('\n', '') + " "
-        quote_author = quote_array[qr_n].split("@")[1].replace('\n', '') + " "
+        quote_text = quote_array[qr_n].split("-")[0]
+        quote_author = quote_array[qr_n].split("- ")[1]
     else :
         quote_text = "No quote found"
         quote_author = "CNtablet"
     quote_data = quote_summary(quote_text, quote_author)
     return quote_data
 
-'''
+
 def addquotetofile(ref_file_path:str, file_path:str, n_quote_text:str, n_quote_author:str):
     author_block = ["Joseph Stalin","Putin","Hitler","Karl Marx"]
     quote_array = []
@@ -108,4 +107,5 @@ def checkfordupes(file_path:str):
         #input("press a key")
         cq +=1
     print(dupes)
-'''
+
+

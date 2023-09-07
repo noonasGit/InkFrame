@@ -55,7 +55,7 @@ def get_aqi_config_data(file_path:str):
     aqi_status_data.aqi_status_normal = parser.get("aqi-config", "aqi_status_normal")
     aqi_status_data.aqi_message_normal = parser.get("aqi-config", "aqi_message_normal")
     aqi_status_data.aqi_status_fair = parser.get("aqi-config", "aqi_status_fair")
-    aqi_status_data.aqi_message_fair = parser.get("aqi-config", "aqi_status_fair")
+    aqi_status_data.aqi_message_fair = parser.get("aqi-config", "aqi_message_fair")
     aqi_status_data.aqi_status_moderate = parser.get("aqi-config", "aqi_status_moderate")
     aqi_status_data.aqi_message_moderate = parser.get("aqi-config", "aqi_message_moderate")
     aqi_status_data.aqi_status_caution = parser.get("aqi-config", "aqi_status_caution")
@@ -71,6 +71,8 @@ def get_aqi_config_data(file_path:str):
 
 def set_aqi_status_data(aq_value:int):
     return_dict = []
+    return_status = "unknown"
+    return_message = "unknown"
     if aq_value == -1:
         return_status = aqi_status_data.aqi_status_unknown
         return_message = aqi_status_data.aqi_message_unknown
@@ -124,10 +126,11 @@ def get_aqi_status_data(file_path:str):
     aqi_status_data.aqi_message_warning = parser.get("aqi-config", "aqi_message_warning")
     aqi_status_data.aqi_status_critical = parser.get("aqi-config", "aqi_status_critical")
     aqi_status_data.aqi_message_critical = parser.get("aqi-config", "aqi_message_critical")
- 
+    
     return_data = []
     return_data = aqi_status_data(aqi_status_unknown = aqi_status_data.aqi_status_unknown,
                                 aqi_message_unknown = aqi_status_data.aqi_message_unknown,
+                                
                                 aqi_status_great = aqi_status_data.aqi_status_great,
                                 aqi_message_great = aqi_status_data.aqi_message_great,
 
@@ -174,7 +177,7 @@ def current_aqi():
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed {}".format(e))
+            print("API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
             aqierror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
@@ -185,11 +188,7 @@ def current_aqi():
         url_resp=False
         url_reason="Unknown"
 
-    #print(rawresponse.ok)   
-
-    #print(rawresponse.text)
     return_data = []
-    #return_data : List[aqi_current]
 
     if aqierror == 0 and url_resp==True:
         try:
@@ -198,7 +197,7 @@ def current_aqi():
         except:
             return_data = aqi_current(aqi_value= -1,
                                 aqi_status = "unknown",
-                                aqi_message = "unknown")
+                                aqi_message = "No Data, please check back later")
 
         ret_aq_data = set_aqi_status_data(aqi_current.aqi_value)
 
@@ -215,7 +214,7 @@ def current_aqi():
             print(api_error)
         return_data = aqi_current(aqi_value= -1,
                           aqi_status = "unknown",
-                          aqi_message = "unknown")
+                          aqi_message = "No Data, please check back later")
 
             
     return return_data

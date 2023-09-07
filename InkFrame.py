@@ -20,8 +20,7 @@ from aqidata import current_aqi, get_aqi_status_data, aqi_trend, write_aqi_stats
 from todoist import gettodolist, getodolistbyduedate
 from generic_transit import next_transit
 from transit import gettransitdepartures
-from getquote import quoteoftheday, addquotetofile
-from getquote_file import quotefromfile
+from getquote import quoteoftheday, addquotetofile, quotefromfile
 from garbage_schedule import get_garbage_status, get_garbage_config_data
 from pi_info import getRAMinfo, getDiskSpace, getCPUtemperature, getCPUuse
 
@@ -49,6 +48,7 @@ class dashboard:
     show_weather_details : int
     show_transit : int
     show_quote : int
+    show_quote_live : int
     quote : str
     show_todo : int
     todo_rows : int
@@ -115,7 +115,8 @@ def createDash():
 
     if dash_config['use_red-id'] == "TRUE":
         screen.use_red = 1
-        print("Red pigment is enabled")
+        applog("System settings" ,"Red pigment is enabled")
+
     else:
         screen.use_red = 0
 
@@ -135,6 +136,11 @@ def createDash():
         dashboard.show_quote = 1
     else : 
         dashboard.show_quote = 0
+    
+    if dash_config['show_quote_live-id'] == "TRUE":
+        dashboard.show_quote_live = 1
+    else : 
+        dashboard.show_quote_live = 0
 
     if dash_config['show-todo-id'] == "TRUE":
         dashboard.show_todo = 1
@@ -162,20 +168,20 @@ def createDash():
         screen.middle_w = screen.width/2
         screen.middle_h = screen.height/2
     except IOError as e:
-        print(e)
+        applog("Screen init" ,e)
 
-    except KeyboardInterrupt:    
-        print("ctrl + c:")
+    except KeyboardInterrupt:
+        applog("System runtime" ,"ctrl + c:")
         epd7in5b_V2.epdconfig.module_exit()
         exit()
 
     # Check if we should clear the E-ink (daily)
     if screen.clean_screen < int(datetime.now().strftime("%d")):
         if performance.cli == "noclean":
-            print("Screen clean skipped")
+            applog("System runtime" ,"Screen cleaning skipped")
             performance.cli = ""
         else:
-            print("Time to clean the screen (once daily)")
+            applog("System runtime" ,"Time to clean the screen - once daily")
             epd.Clear()
             screen.clean_screen = int(datetime.now().strftime("%d"))
 
@@ -261,7 +267,7 @@ def createDash():
     header_date_w = header_Date_t_size[2]
     header_date_h = header_Date_t_size[3]
 
-    print("drawing todays day")
+    applog("Dashboard" ,"drawing todays day")
 
     x = 10
     y = 2
@@ -532,6 +538,8 @@ def createDash():
         aqi_number ="?"
         aqi_icon_name = "AQI_badge.png"
         aqi_sev = -1
+        aqi_font = SFWAQI_bold_small
+
 
         if today_aqi.aqi_value == -1:
             aqi_sev = -1
@@ -547,7 +555,7 @@ def createDash():
         if today_aqi.aqi_value > 50 and today_aqi.aqi_value <=80:
             aqi_sev = 0
             aqi_font = SFWAQI_bold
-            aqi_icon_name = "AQI_badge.png"
+            aqi_icon_name = "AQI_good.png"
         if today_aqi.aqi_value > 80 and today_aqi.aqi_value <=100:
             aqi_sev = 1
             aqi_icon_name = "AQI_badge.png"
@@ -697,51 +705,52 @@ def createDash():
         live_transit_state = 0   
 
         #Check if it is time to get live data
-        print("Current hour is: "+str(hourglass.curenttime))
-        print("Live cut in is: "+str(hourglass.live_cutin_hour))
-        print("Live cut out is: "+str(hourglass.live_cutout_hour))
+        applog("Transit feature" ,"Current hour is: "+str(hourglass.curenttime))
+        applog("Transit feature" ,"Live cut in is: "+str(hourglass.live_cutin_hour))
+        applog("Transit feature" ,"Live cut out is: "+str(hourglass.live_cutout_hour))
         if transit.use_live == 'TRUE':
-            print("Live Transit is ON")
+            applog("Transit feature" ,"Live transit times is ON")
             if hourglass.curenttime >= hourglass.live_cutin_hour and hourglass.curenttime <= hourglass.live_cutout_hour:
-                print("Live Transit Feature: within cut in times")
+                applog("Transit feature" ,"Live Transit Feature: within cut in times")
                 live_transit_state = 1
-                print("Attemting to get Live data for transit stop 1")
+                applog("Transit feature" ,"Attemting to get Live data for transit stop 1")
                 get_transit_times1 = gettransitdepartures(datetime.now(),transit.api_key,transit.transit1_stop)
-                print("Got "+str(len(get_transit_times1))+" live departures")
+                applog("Transit feature" ,"Got "+str(len(get_transit_times1))+" live departures")
                 if len(get_transit_times1) == 0:
-                    print("No live data for stop 1 - fallback to static")
+                    applog("Transit feature" ,"No live data for stop 1 - fallback to static")
                     get_transit_times1 = next_transit(1)
                     live_transit_state = 0
                     transit_ind = not_live_ind
                     transit_ind_B = not_live_ind_B
                     transit_ind_R = not_live_ind_R
-                print("Attemting to get Live data for transit stop 2")
+                applog("Transit feature" ,"Attemting to get Live data for transit stop 2")
+                
                 get_transit_times2 = gettransitdepartures(datetime.now(),transit.api_key,transit.transit2_stop)
-                print("Got "+str(len(get_transit_times1))+" live departures")
+                applog("Transit feature" ,"Got "+str(len(get_transit_times1))+" live departures")
                 if len(get_transit_times2) == 0:
-                    print("No live data for stop 1 - fallback to static")
+                    applog("Transit feature" ,"No live data for stop 2 - fallback to static")
                     get_transit_times1 = next_transit(2)
                     live_transit_state = 0
                     transit_ind = not_live_ind
                     transit_ind_B = not_live_ind_B
                     transit_ind_R = not_live_ind_R
             else :
-                print("Getting static times")
+                applog("Transit feature" ,"Getting static times")
                 get_transit_times1 = next_transit(1)
-                print("Got "+str(len(get_transit_times1))+" static departures for stop 1")
+                applog("Transit feature" ,"Got "+str(len(get_transit_times1))+" static departures for stop 1")
                 get_transit_times2 = next_transit(2)
-                print("Got "+str(len(get_transit_times2))+" static departures for stop 2")
+                applog("Transit feature" ,"Got "+str(len(get_transit_times2))+" static departures for stop 2")
                 transit_ind = not_live_ind
                 transit_ind_B = not_live_ind_B
                 transit_ind_R = not_live_ind_R
 
         if transit.use_live == 'FALSE':
-            live_transit_state = 0   
-            print("Getting static times")
+            live_transit_state = 0
+            applog("Transit feature" ,"Getting static times")
             get_transit_times1 = next_transit(1)
-            print("Got "+str(len(get_transit_times1))+" static departures for stop 1")
+            applog("Transit feature" ,"Got "+str(len(get_transit_times1))+" static departures for stop 1")
             get_transit_times2 = next_transit(2)
-            print("Got "+str(len(get_transit_times2))+" static departures for stop 2")
+            applog("Transit feature" ,"Got "+str(len(get_transit_times2))+" static departures for stop 2")
             transit_ind = not_live_ind
             transit_ind_B = not_live_ind_B
             transit_ind_R = not_live_ind_R
@@ -763,8 +772,8 @@ def createDash():
 
         if dep_cnt >= 3 :
 
-            while bc < 3 :
-                draw_black.text((bx, by), get_transit_times1[bc], font=SFTransitTime, fill=black)
+            for t in  get_transit_times1:
+                draw_black.text((bx, by), t, font=SFTransitTime, fill=black)
                 #if live_transit_state == 0  and screen.use_red == 1:
                     #imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
                     #imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
@@ -773,7 +782,9 @@ def createDash():
                 bc = bc +1
                 by = by + (dept_text[3])
                 bly = bly + (dept_text[3])
-    
+                if bc > 2:
+                    break
+
         if dep_cnt == 0 :
             draw_black.text((x, y), "--:--", font=SFTransitTime, fill=black)
 
@@ -816,8 +827,8 @@ def createDash():
 
         if dep_cnt >= 3 :
             
-            while bc < 3 :
-                draw_black.text((bx, by), get_transit_times1[bc], font=SFTransitTime, fill=black)
+            for t in get_transit_times2 :
+                draw_black.text((bx, by), t, font=SFTransitTime, fill=black)
                 #if live_transit_state == 0 and screen.use_red == 1:
                     #imageR.paste(transit_ind_R,(blx,bly),transit_ind_R)
                     #imageB.paste(transit_ind_B,(blx,bly),transit_ind_B)
@@ -826,6 +837,8 @@ def createDash():
                 bc = bc +1
                 by = by + (dept_text[3])
                 bly = bly + (dept_text[3])
+                if bc > 2:
+                    break
     
         if dep_cnt == 0 :
             draw_black.text((x, y), "--:--", font=SFTransitTime, fill=black)
@@ -931,23 +944,27 @@ def createDash():
         qml = 85
         qll = qml+1
         qmaxtries = 0
-        print("Hourglass day : "+str(hourglass.day))
-        print("Hourglass currentday: "+str(hourglass.currentday))
+        applog("Quote of the day" ,"Hourglass day : "+str(hourglass.day))
         if hourglass.currentday > hourglass.day:
-            print("Time to get a new quote...")
+            applog("Quote of the day" ,"Time to get a new quote...")
             hourglass.day = int(datetime.now().strftime("%d"))
 
-            print("Quote Feature : Getting a quote under "+str(qml)+" lenght")
+            applog("Quote of the day" ,"Getting a quote under "+str(qml)+" lenght")
             while qll >= qml :
-                dashboard.quote = quoteoftheday()
+                if dashboard.show_quote_live == 1:
+                    applog("Quote of the day" ,"Getting random quote from the internet...")
+                    dashboard.quote = quoteoftheday()
+                else:
+                    applog("Quote of the day" ,"Getting random quote from local database...")
+                    dashboard.quote = quotefromfile("quotes.txt")
                 qll = len(dashboard.quote.quote_text)
                 qmaxtries +=1
                 if qmaxtries > 10:
                     break
                 if qll >  qml:
-                    print("Quote Feature : Attempt: "+str(qmaxtries))
+                    applog("Quote of the day" ,"Quote Feature : Attempt: "+str(qmaxtries))
                 else:
-                    print("Quote Feature : Quote lenght is "+str(qll))
+                    applog("Quote of the day" ,"Quote lenght is "+str(qll))
             if qll == 0 :
             # Last effort to fill quote of the day if online fails
                 quote_icon = Image.open(os.path.join(picdir, "quote_icon_disabled.png"))
@@ -957,16 +974,20 @@ def createDash():
                 qll = len(dashboard.quote.quote_text)
     
             if qll > qml:
-                print("Quote Feature : Max attempts to get a short enough quote exhausted.")
+                applog("Quote of the day" ,"Max attempts to get a short enough quote exhausted.")
                 #Just in case we could not find a short enough quote in 10 attempts.
                 dashboard.quote.quote_text = "Sorry, No short Quote found, please adjust the \nquote-of-the-day-max-lenght value"
                 dashboard.quote.quote_author = "Dashboard Ai"
             else :
-                addquotetofile("quotes.txt","quotes.txt",dashboard.quote.quote_text, dashboard.quote.quote_author)
-                print("Quote Feature : "+dashboard.quote.quote_text+" - "+dashboard.quote.quote_author)
+                if dashboard.show_quote_live == 1:
+                    addquotetofile("quotes.txt","quotes.txt",dashboard.quote.quote_text, dashboard.quote.quote_author)
+                    applog("Quote of the day" ,dashboard.quote.quote_text)
+                    applog("Quote of the day" ,dashboard.quote.quote_author)
+                else:
+                    quote_icon = Image.open(os.path.join(picdir, "quote_icon_disabled.png"))
         else:
             next_quote_hour = datetime.now() + timedelta(days=1)
-            print("Only one quote per day : Keeping quote, next one at "+next_quote_hour.strftime("%d")+" daycount at "+str(hourglass.day))
+            applog("Quote of the day" ,"Only one quote per day : Keeping quote, next one at "+next_quote_hour.strftime("%d")+" daycount at "+str(hourglass.day))
         #print("Now trying to slice the text in chunks")
         text_g, text_g, test_t_w, test_t_h = draw_black.textbbox((0,0),dashboard.quote.quote_text, font=SFQuote)
         text_max = test_t_w
@@ -990,7 +1011,7 @@ def createDash():
         wl = len(dashboard.quote.quote_text)
 
         #See if the total is larger than the text_line_max value set.
-        print("Quote Feature : Max pixels per line is "+str(text_line_max))
+        applog("Quote of the day" ,"Max pixels per line is "+str(text_line_max))
 
         if text_max > text_line_max:
             l = 0
@@ -1057,7 +1078,9 @@ def createDash():
         ###########################
     if dashboard.show_todo == 1 :
 
-        print("geting todoist list")
+        
+        applog("Todoist feature" ,"geting todoist list...")
+
         todo_icon = Image.open(os.path.join(picdir, "tasks_icon.png"))
         todo_icon_B = Image.open(os.path.join(picdir, "tasks_iconB.png"))
         todo_icon_R = Image.open(os.path.join(picdir, "tasks_iconR.png"))
@@ -1086,15 +1109,15 @@ def createDash():
 
 
         if dashboard.todo_filter == "TODAY":
-            print("Getting only todo's due today...")
+            applog("Todoist feature" ,"Getting only todo's due today...")
             show_dude_date = False
             today_todo_list = getodolistbyduedate(datetime.now())
         else:
-            print("Getting all todos due")
+            applog("Todoist feature" ,"Getting all todos due...")
             show_dude_date = True
             today_todo_list = gettodolist()
         numtodos = len(today_todo_list)
-        print("Got "+str(numtodos)+" tasks to show")
+        applog("Todoist feature" ,"Got "+str(numtodos)+" tasks to show")
         tnum = 0
         tdrow = 0
         col_space = 0
@@ -1107,7 +1130,7 @@ def createDash():
                 if int(td_w + (todo_mini_icon.size[0]*2)) > col_space:
                     col_space = int(td_w + (todo_mini_icon.size[0]*2))
                 if int(gTx + col_space) >= int(screen.width - 5):
-                    print("No more space for tasks...")
+                    applog("Todoist feature" ,"No more space for tasks on screen...")
                     break
                 imageB.paste(todo_mini_icon,(gTx, gTy),todo_mini_icon)
                 draw_black.text((int(gTx+todo_mini_icon.size[0]+2), int(gTy - todo_mini_icon.size[1]/3)), tsk_title, font=SFToDo, fill=black)
@@ -1142,7 +1165,7 @@ def createDash():
         else:
             screen_y = gTTy
     else:
-        print("Not showing todoist list")
+        applog("Todoist feature" ,"OFF")
 
             ############
     ############################
@@ -1184,8 +1207,7 @@ def createDash():
             ly = gTy
             draw_black.line([(lx, ly), ((lx+300), ly)], black)
             gTy = gTy + 10
-
-        print("Garbage schedule : there is garbage today")
+        applog("Garbage schedule" ,"there is garbage today")
         if screen.use_red == 1:
             imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
             imageR.paste(cal_todo_icon_R,(gTx, gTy),cal_todo_icon_R)
@@ -1194,7 +1216,7 @@ def createDash():
         gTx = gTx + int( cal_todo_icon.size[0] + 8 )
         gTy = gTy - 8
         if hourglass.curenttime <= comparetime:
-            print("get ready for the truck!")
+            applog("Garbage schedule" ,"get ready for the truck!")
             g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Truck.png'))
             g_string = garbage_vars['all-garbage-time-message-today-id']+ " "
             g_sub_sting = garbage_vars['all-garbage-collect-message-id']
@@ -1220,7 +1242,7 @@ def createDash():
             g_string = g_string + " " + garbage_vars['all-garbage-time-message-end-id']
 
         else:
-            print("Time to take the bins back in")
+            applog("Garbage schedule" ,"Time to take the bins back in")
             g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Garage.png'))
             g_string = garbage_vars['all-collection-time-over-message-line1-id']
             g_sub_sting = garbage_vars['all-collection-time-over-message-line2-id']
@@ -1308,8 +1330,7 @@ def createDash():
         cal_todo_iconB = Image.open(os.path.join(picdir, 'tomorrow_icon_B.png'))
         cal_todo_iconR = Image.open(os.path.join(picdir, 'tomorrow_icon_R.png'))
         gTx = 10 
-        print("Garbage schedule : there is garbage tomorrow")
-        
+        applog("Garbage schedule" ,"there is garbage tomorrow")
         if screen.use_red == 1:
             imageR.paste(cal_todo_iconR,(gTx, gTy),cal_todo_iconR)
             imageB.paste(cal_todo_iconB,(gTx, gTy),cal_todo_iconB)
@@ -1460,6 +1481,7 @@ def get_dashboard_config_data(file_path:str):
     data['show_weather_details-id'] = parser.get("feature-config", "show_weather_details")
     data['show_transit-id'] = parser.get("feature-config", "show_transit")
     data['show_quote-id'] = parser.get("feature-config", "show_quote")
+    data['show_quote_live-id'] = parser.get("feature-config", "show_quote_live")
     data['show-todo-id'] = parser.get("feature-config", "show-todo")
     data['todo-rows-id'] = parser.get("feature-config", "todo-rows")
     data['todo-filter-id'] = parser.get("feature-config", "todo-filter")
@@ -1501,7 +1523,7 @@ def get_garbage_config_data(file_path:str):
     return data
 
 def sleep_screen(wake_date:date):
-    print("Sleeping screen initiated")
+    applog("Inkframe" ,"Sleeping screen initiated")
     SleepFont = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",32)
     SleepFont_foot = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",24)
     SFWdetails_semibold = ImageFont.truetype("fonts/SF-Compact-Rounded-Semibold.otf",22)
@@ -1519,10 +1541,10 @@ def sleep_screen(wake_date:date):
         screen.middle_w = screen.width/2
         screen.middle_h = screen.height/2
     except IOError as e:
-        print(e)
+        applog("Inkframe" ,"error"+str(e)) 
 
-    except KeyboardInterrupt:    
-        print("ctrl + c:")
+    except KeyboardInterrupt:
+        applog("Inkframe" ,"ctrl + c received") 
         epd7in5b_V2.epdconfig.module_exit()
         exit()
     imageB = Image.new('L', (epd.width, epd.height), 255)  # 255: clear the frame
@@ -1595,15 +1617,30 @@ def sleep_screen(wake_date:date):
     epd.display(epd.getbuffer(imageB),epd.getbuffer(imageR))
     epd.sleep()
     wakeup_day = wake_date.strftime("%d")
-    print("Set to wake up on the "+wakeup_day)
+    applog("Sleep screen" ,"Set to wake up on the "+wakeup_day)
     while True:
-        print("Entring coma...")
+        applog("Sleep screen" ,"Entring coma...")
         if datetime.now().strftime("%d") == wakeup_day:
             if int(datetime.now().strftime("%H")) >= screen.wake_hour:
                 break
-        print("Sleeping for one hour")
+        applog("Sleep screen" ,"Sleeping for one hour")
         time.sleep(3600)
         
+def crashlog(file_path:str, crash_message: str):
+    subdir = os.path.dirname(file_path)
+    #print(subdir)
+    if os.path.exists(subdir) == False:
+        os.mkdir(subdir)
+    aqi_array = []
+    date_time_stamp = datetime.now().strftime("%m.%b.%Y, %H:%M:%S")
+    my_file = open(file_path, 'a')
+    applog("Inkscreen" ,"Logging crash message")
+    my_file.write(date_time_stamp+" | "+crash_message+'\n')
+    my_file.close
+
+def applog(app_section: str ,app_message: str):
+    date_time_stamp = datetime.now().strftime("%m.%b.%Y, %H:%M:%S")
+    print(date_time_stamp+" | "+app_section+" | "+app_message)
 
 
 def main():
@@ -1624,22 +1661,22 @@ def main():
     screen.sleep_hour = int(dash_config['screen_sleep_hour-id'])
     screen.wake_hour = int(dash_config['screen_wake_hour-id'])
     hourglass.evening_hour = int(dash_config['evening_hour-id'])
-    print("Evening hour is set to: "+str(hourglass.evening_hour))
-    print("Initial used RAM is: "+str(performance.usedram))
+    applog("Inkscreen","Evening hour is set to: "+str(hourglass.evening_hour))
+    applog("Inkscreen","Initial used RAM is: "+str(performance.usedram))
     while True :
-        print("Screen sleep at: "+str(screen.sleep_hour))
-        print("Wake up at: "+str(screen.wake_hour))
+        applog("Inkscreen","Screen sleep at: "+str(screen.sleep_hour))
+        applog("Inkscreen","Wake up at: "+str(screen.wake_hour))
         min = 0
         hourglass.currentday = int(datetime.now().strftime("%d"))
         hourglass.last_refresh = datetime.now().strftime("Last Refresh @ %H:%M")
         hourglass.curenttime = int(datetime.now().strftime("%H"))
         hourglass.hour = int(datetime.now().strftime("%H"))
-        print("it is now "+datetime.now().strftime("%H"))
+        applog("Inkscreen","it is now "+datetime.now().strftime("%H"))
         if int(datetime.now().strftime("%H")) < screen.sleep_hour:
-            print("Time to draw the dashboard...")
+            applog("Inkscreen","Time to draw the dashboard...")
             createDash()
         else:
-            print("Time to go to sleep...")
+            applog("Inkscreen","Time to go to sleep...")
             sleep_screen(datetime.now() + timedelta(days=1))
 
         ram = getRAMinfo()
@@ -1659,24 +1696,23 @@ def main():
         
         cpuT = getCPUtemperature()
         cpuU = getCPUuse()
-        print("********************************")
-        print("RAM: "+str(performance.usedram)+" used, and "+str(performance.freeram)+" free")
-        print("RAM Previous was: "+str(performance.previousram))
+        applog("System Performance","********************************")
+        applog("System Performance","RAM: "+str(performance.usedram)+" used, and "+str(performance.freeram)+" free")
+        applog("System Performance","RAM Previous was: "+str(performance.previousram))
         if trend == 1:
-            print("Used RAM Increase by: "+str(performance.ramincrease))
+            applog("System Performance","Used RAM Increase by: "+str(performance.ramincrease))
         if trend == -1 :
-            print("Used RAM Decresed by: "+str(performance.ramincrease))
+            applog("System Performance","Used RAM Decresed by: "+str(performance.ramincrease))
         if trend == 0 :
-            print("Used RAM unchanged ")
+            applog("System Performance","Used RAM unchanged")
 
-        print("CPU Temp: "+cpuT)
-        print("CPU Usage: "+cpuU)
-        print("********************************")
+
+        applog("System Performance","CPU Usage: "+cpuU)
+        applog("System Performance","********************************")
         performance.previousram = performance.usedram
 
-        print("Refresh in "+str(screen.refresh_rate_min)+" minutes")
+        applog("Inkscreen","Refresh in "+str(screen.refresh_rate_min)+" minutes")
         time.sleep((screen.refresh_rate_min*60))
-        
 
 if __name__ == "__main__":
     main()

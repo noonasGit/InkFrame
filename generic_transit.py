@@ -3,30 +3,35 @@ import time
 import configparser
 
 def get_transit_departures(file_path:str, schedule_key:str):
-    parser = configparser.RawConfigParser()
-    parser.read(file_path)
-    data = []
-    data = parser.get(schedule_key, "schedule")
-    data = data.split(",")
-    return data
+   parser = configparser.RawConfigParser()
+   parser.read(file_path)
+   data = []
+   try:
+      data = parser.get(schedule_key, "schedule")
+      data = data.split(",")
+   except:
+      print("No schedules found")
+    
+   return data
 
 
 def next_transit(stop_number:int):
    # config from the file
    #Setup array of morning bus times for the week
-   transit_weekly = get_transit_departures("generic_transit_schedules.ini","weekdays"+str(stop_number))
-   transit_sat = get_transit_departures("generic_transit_schedules.ini","saturdays"+str(stop_number))
-   transit_sun = get_transit_departures("generic_transit_schedules.ini","sundays"+str(stop_number))
-      
-
    transit_check_schedule = []
    
    weekDay = datetime.now().strftime("%A")
    if weekDay == "Saturday" :
+      print("Getting static transit for saturdays"+str(stop_number))
+      transit_sat = get_transit_departures("generic_transit_schedules.ini","saturdays"+str(stop_number))
       transit_check_schedule = transit_sat
    if weekDay ==  "Sunday" :
+      print("Getting static transit for sundays"+str(stop_number))
+      transit_sun = get_transit_departures("generic_transit_schedules.ini","sundays"+str(stop_number))
       transit_check_schedule = transit_sun
    if weekDay != "Saturday" or weekDay != "Sunday" :
+      print("Getting static transit for weekdays"+str(stop_number))
+      transit_weekly = get_transit_departures("generic_transit_schedules.ini","weekdays"+str(stop_number))
       transit_check_schedule = transit_weekly
 
    #Initiate the array
