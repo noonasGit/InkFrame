@@ -169,7 +169,7 @@ def current_aqi():
     #print(url)
     api_error = ""
     aqierror = 0
-    print("Connecting to AQI API, current levels for "+aqi_config['city-id']+"...")
+    #print("Connecting to AQI API, current levels for "+aqi_config['city-id']+"...")
     
     for attempt in range(2):
         try:
@@ -177,7 +177,7 @@ def current_aqi():
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed, attempt "+str(attempt))
+            print("AQI API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
             aqierror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
@@ -222,6 +222,7 @@ def current_aqi():
 
 
 def write_aqi_stats(file_path:str, aqi_value: int):
+    ret_message = ""
     subdir = os.path.dirname(file_path)
     #print(subdir)
     if os.path.exists(subdir) == False:
@@ -231,7 +232,7 @@ def write_aqi_stats(file_path:str, aqi_value: int):
         ref_file = open(file_path, 'r')
         for rline in ref_file:
              aqi_array.append(rline)
-        print(str(len(aqi_array))+" measures loaded...")
+        #print(str(len(aqi_array))+" measures loaded...")
         ref_file.close
     q_value = datetime.now().strftime("%H@")
     #print(q_value)
@@ -239,9 +240,10 @@ def write_aqi_stats(file_path:str, aqi_value: int):
     my_file = open(file_path, 'a')
     if len(aqi_array) > 0:
         if q_value in str(aqi_array):
-            print("AQI Hour Already in stats")
+            ret_message = "AQI Hour Already in stats"
+
         else:
-            print("Adding AQI to stats hour")
+            ret_message = "Adding AQI to stats hour"
             my_file.write(q_value+str(aqi_value)+'\n')
     else:
         print("File is empty...")

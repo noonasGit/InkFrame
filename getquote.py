@@ -58,9 +58,11 @@ def addquotetofile(ref_file_path:str, file_path:str, n_quote_text:str, n_quote_a
         my_file = open(file_path, 'a')
         if any(n_quote_text in word for word in  ref_array):
             if not n_quote_author in author_block :
-                print("Quote alredy in file")
+                #print("Quote alredy in file")
+                my_file.close
             else:
                 print("Author "+n_quote_author+" blocked")
+                my_file.close
         else:
             print("New quote added to file : "+file_path)
             my_file.write("\n"+n_quote_text)
@@ -68,6 +70,8 @@ def addquotetofile(ref_file_path:str, file_path:str, n_quote_text:str, n_quote_a
             my_file.close
     else:
         print("Error")
+        my_file.close
+
 
 def quotefromfile(file_path:str):
     if os.path.exists(file_path) :

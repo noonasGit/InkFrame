@@ -22,15 +22,15 @@ def next_transit(stop_number:int):
    
    weekDay = datetime.now().strftime("%A")
    if weekDay == "Saturday" :
-      print("Getting static transit for saturdays"+str(stop_number))
+      #print("Getting static transit for saturdays"+str(stop_number))
       transit_sat = get_transit_departures("generic_transit_schedules.ini","saturdays"+str(stop_number))
       transit_check_schedule = transit_sat
    if weekDay ==  "Sunday" :
-      print("Getting static transit for sundays"+str(stop_number))
+      #print("Getting static transit for sundays"+str(stop_number))
       transit_sun = get_transit_departures("generic_transit_schedules.ini","sundays"+str(stop_number))
       transit_check_schedule = transit_sun
    if weekDay != "Saturday" or weekDay != "Sunday" :
-      print("Getting static transit for weekdays"+str(stop_number))
+      #print("Getting static transit for weekdays"+str(stop_number))
       transit_weekly = get_transit_departures("generic_transit_schedules.ini","weekdays"+str(stop_number))
       transit_check_schedule = transit_weekly
 
@@ -43,10 +43,10 @@ def next_transit(stop_number:int):
       return []
    stop_time = transit_check_schedule[l]
    first_bus = transit_check_schedule[0]
-   print("Loading departures for "+weekDay)
-   print(str(len(transit_check_schedule))+" depatures loaded")
-   print("First departure is at: "+first_bus)
-   print("Last departure time is at: "+transit_check_schedule[l])
+   #print("Loading departures for "+weekDay)
+   #print(str(len(transit_check_schedule))+" depatures loaded")
+   #print("First departure is at: "+first_bus)
+   #print("Last departure time is at: "+transit_check_schedule[l])
    start_time = datetime.now().strftime("%H:%M)")
    t = 0
    if start_time < stop_time or len(transit_check_schedule) == 0:

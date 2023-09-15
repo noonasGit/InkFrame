@@ -88,7 +88,7 @@ def current_weather():
     #print(url)
     api_error = ""
     werror = 0
-    print("Connecting to Weather API, current weather...")
+    #print("Connecting to Weather API, current weather...")
     
     for attempt in range(2):
         try:
@@ -96,7 +96,7 @@ def current_weather():
             break  # If the requests succeeds break out of the loop
         except RequestException as e:
             api_error = format(e)
-            print("API call failed, attempt "+str(attempt))
+            print("OpenWeather API call failed, attempt "+str(attempt))
             time.sleep(2 ** attempt)
             werror = -3
             continue  # if not try again. Basically useless since it is the last command but we keep it for clarity
@@ -106,11 +106,6 @@ def current_weather():
     except:
         url_resp=False
         url_reason="Unknown"
-
-    
-    #print(rawresponse.ok)   
-
-    #print(rawresponse.text)
 
     if werror == 0 and url_resp==True:
         return_data = []
@@ -216,7 +211,7 @@ def get_forecast(numbdays:int):
     #print("URL Constructed...")
     #print(url)
     api_error = ""
-    print("Connecting to Weather API, forecast...")
+    #print("Connecting to Weather API, forecast...")
     werror = 0
     for attempt in range(2):
         try:
@@ -234,11 +229,6 @@ def get_forecast(numbdays:int):
     except:
         url_resp=False
         url_reason="Unknown"
-
-
-    #print(rawresponse.ok)   
-
-    #print(rawresponse.text)
 
     if werror == 0 and url_resp==True:
         return_data = []
@@ -301,8 +291,6 @@ def tomorrow_weather():
     tomorrow_day = datetime.now() + timedelta(days=day_offset)
     tomorrow_ref = tomorrow_day.date()
     weather_forecast.total_pop = 0
-    #print("tomorrow_day "+str(tomorrow_day))
-    #print("tomorrow_ref "+str(tomorrow_ref))
 
     weather_config = dict()
     weather_config = get_weather_config_data("openweather.ini")
@@ -324,7 +312,7 @@ def tomorrow_weather():
     #print(url)
     api_error = ""
     werror = 0
-    print("Connecting to Weather API, forecast, one second...")
+    #print("Connecting to Weather API, forecast, one second...")
     
     for attempt in range(2):
         try:
@@ -456,7 +444,7 @@ def get_air_levels():
     api_error = ""
     werror = 0
 
-    print("Connecting to Weather API, current air pollutants...")
+    #print("Connecting to Weather API, current air pollutants...")
     #print(url)
 
 
