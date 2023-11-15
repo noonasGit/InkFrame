@@ -125,17 +125,18 @@ def current_weather():
             weather_current.humidity = json_data['main']['humidity']
             weather_current.wind = json_data['wind']['speed']
             w_text = ""
-            if weather_current.wind <= 5 :
+            windkmh = round( (weather_current.wind*3600)/1000,2)
+            if windkmh <= 5 :
                 w_text = "Still wind"
-            if weather_current.wind >5 and weather_current.wind <= 10 :
+            if windkmh >5 and windkmh <= 10 :
                 w_text = "Calm wind"
-            if weather_current.wind >10 and weather_current.wind <= 25 :
+            if windkmh >10 and windkmh <= 25 :
                 w_text = "Gusts"
-            if weather_current.wind >25 and weather_current.wind <= 80 :
+            if windkmh >25 and windkmh <= 80 :
                 w_text = "Winds"
-            if weather_current.wind >80 and weather_current.wind <= 120 :
+            if windkmh >80 and windkmh <= 120 :
                 w_text = "Storms"
-            if weather_current.wind >120:
+            if windkmh >120:
                 w_text = "Hurricane"
             weather_current.wind_conditions = w_text
             #weather_current.wind_gust = json_data['wind']['gust']

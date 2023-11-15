@@ -155,6 +155,8 @@ def createDash():
             applog("System runtime" ,"Time to clean the screen - once daily")
             epd.Clear()
             screen.clean_screen = int(datetime.now().strftime("%d"))
+            get_dashboard_config_data("dashboard.ini")
+            applog("System runtime" ,"Re-loading config parameters daily.")
 
 
     black = 'rgb(0,0,0)'
@@ -501,7 +503,7 @@ def createDash():
             aqi_icon_name = "AQI_good.png"
         if today_aqi.aqi_value > 80 and today_aqi.aqi_value <=100:
             aqi_sev = 1
-            aqi_icon_name = "AQI_badge.png"
+            aqi_icon_name = "AQI_Moderate.png"
             aqi_font = font.SFWAQI_bold_small
         if today_aqi.aqi_value > 100 and today_aqi.aqi_value <=150:
             aqi_sev = 2
@@ -639,6 +641,7 @@ def createDash():
         imageB.paste(t_icon1, (ti1X,ti1Y),t_icon1)
         t_name1 = transit.transit1_name
         t_nameSize = draw_black.textbbox((0, 0), t_name1, font=font.SF_TransitName)
+
         i1x = ti1M - int(t_nameSize[2]/2)
         i1y = ti1Y + int(t_icon1.size[1])
         draw_black.text((i1x,i1y),t_name1 , font = font.SF_TransitName, fill = black)
@@ -893,9 +896,9 @@ def createDash():
         qll = qml+1
         qmaxtries = 0
         applog("Quote of the day" ,"Hourglass day : "+str(hourglass.day))
-        if hourglass.currentday > hourglass.day:
+        if hourglass.day != int(datetime.now().day):
             applog("Quote of the day" ,"Time to get a new quote...")
-            hourglass.day = int(datetime.now().strftime("%d"))
+            hourglass.day = int(datetime.now().day)
 
             applog("Quote of the day" ,"Getting a quote under "+str(qml)+" lenght")
             while qll >= qml :
@@ -1183,7 +1186,7 @@ def createDash():
                         g_string = g_string + " & "
                     g_string = g_string + GenGarbage.garbage_vars['compost_title-id']
                 if GenGarbage.g_data.dumpster == 1:
-                    if GenGarbage.g_data.compost == 1:
+                    if GenGarbage.g_data.compost == 1 or GenGarbage.g_data.landfill == 1:
                         g_string = g_string + " & "
                     g_string = g_string + GenGarbage.garbage_vars['dumpster_title-id']
                 if GenGarbage.g_data.xmas_tree == 1:
