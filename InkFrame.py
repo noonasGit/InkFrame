@@ -1116,274 +1116,280 @@ def createDash():
             screen_y = gTTy
     else:
         applog("Dashboard" ,"Todoist feature : OFF")
-
-            ############
-    ############################
-    # Generic Garbage Schedule #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-    ##  ##  ##  ##  ##  ##  ## #
-     ## ##  ##  ##  ##  ##  ### 
-        ####################
-
-    # Setting up Garabage Variables          
-
-    is_garbage_tomorrow = (GenGarbage.g_data.landfill_prepapre, GenGarbage.g_data.recycle_prepare, GenGarbage.g_data.compost_prepare, GenGarbage.g_data.dumpster_prepapre)
-    is_garbage_today = (GenGarbage.g_data.landfill, GenGarbage.g_data.recycle, GenGarbage.g_data.compost, GenGarbage.g_data.xmas_tree, GenGarbage.g_data.dumpster)
-
-    garbage_collection_hour = int(GenGarbage.garbage_vars['all-collection-time-over-id'])
-    comparetime = hourglass.evening_hour
-    gTy = screen_y
-    gTx = 10
-    gYincr = 6
-    gx = 50
-    gy = screen.width - 280
-
-    # Load the Calendar Icon
-    cal_todo_icon = Image.open(os.path.join(picdir, 'today_icon.png'))
-    cal_todo_icon_R = Image.open(os.path.join(picdir, 'today_icon_R.png'))
     
-    if 1 in is_garbage_today :
-        if dashboard.show_quote == 1:
-            lx = 247
-            ly = gTy
-            draw_black.line([(lx, ly), ((lx+300), ly)], black)
-            gTy = gTy + 10
-        applog("Garbage schedule" ,"there is garbage today")
-        if screen.use_red == 1:
-            imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
-            imageR.paste(cal_todo_icon_R,(gTx, gTy),cal_todo_icon_R)
-        else:
-            imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
-        gTx = gTx + int( cal_todo_icon.size[0] + 8 )
-        gTy = gTy - 8
-        if hourglass.curenttime <= comparetime:
-            applog("Garbage schedule" ,"get ready for the truck!")
-            g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Truck.png'))
-            g_string = GenGarbage.garbage_vars['all-garbage-time-message-today-id']+ " "
-            g_sub_sting = GenGarbage.garbage_vars['all-garbage-collect-message-id']
+    if dashboard.show_garbage == 1:
+        applog("Dashboard","Garbage Schedule | ON")
 
-            if GenGarbage.g_data.landfill == 1:
-                g_string = g_string + GenGarbage.garbage_vars['landfill_title-id']
-            if GenGarbage.g_data.recycle == 1:
+
+                ############
+        ############################
+        # Generic Garbage Schedule #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+        ##  ##  ##  ##  ##  ##  ## #
+         ## ##  ##  ##  ##  ##  ### 
+            ####################
+
+        # Setting up Garabage Variables          
+
+        is_garbage_tomorrow = (GenGarbage.g_data.landfill_prepapre, GenGarbage.g_data.recycle_prepare, GenGarbage.g_data.compost_prepare, GenGarbage.g_data.dumpster_prepapre)
+        is_garbage_today = (GenGarbage.g_data.landfill, GenGarbage.g_data.recycle, GenGarbage.g_data.compost, GenGarbage.g_data.xmas_tree, GenGarbage.g_data.dumpster)
+
+        garbage_collection_hour = int(GenGarbage.garbage_vars['all-collection-time-over-id'])
+        comparetime = hourglass.evening_hour
+        gTy = screen_y
+        gTx = 10
+        gYincr = 6
+        gx = 50
+        gy = screen.width - 280
+
+        # Load the Calendar Icon
+        cal_todo_icon = Image.open(os.path.join(picdir, 'today_icon.png'))
+        cal_todo_icon_R = Image.open(os.path.join(picdir, 'today_icon_R.png'))
+    
+        if 1 in is_garbage_today :
+            if dashboard.show_quote == 1:
+                lx = 247
+                ly = gTy
+                draw_black.line([(lx, ly), ((lx+300), ly)], black)
+                gTy = gTy + 10
+            applog("Garbage schedule" ,"there is garbage today")
+            if screen.use_red == 1:
+                imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
+                imageR.paste(cal_todo_icon_R,(gTx, gTy),cal_todo_icon_R)
+            else:
+                imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
+            gTx = gTx + int( cal_todo_icon.size[0] + 8 )
+            gTy = gTy - 8
+            if hourglass.curenttime <= comparetime:
+                applog("Garbage schedule" ,"get ready for the truck!")
+                g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Truck.png'))
+                g_string = GenGarbage.garbage_vars['all-garbage-time-message-today-id']+ " "
+                g_sub_sting = GenGarbage.garbage_vars['all-garbage-collect-message-id']
+
                 if GenGarbage.g_data.landfill == 1:
+                    g_string = g_string + GenGarbage.garbage_vars['landfill_title-id']
+                if GenGarbage.g_data.recycle == 1:
+                    if GenGarbage.g_data.landfill == 1:
+                        g_string = g_string + " & "
+                    g_string = g_string + GenGarbage.garbage_vars['recycle_title-id']
+                if GenGarbage.g_data.compost == 1:
+                    if GenGarbage.g_data.recycle == 1:
+                        g_string = g_string + " & "
+                    g_string = g_string + GenGarbage.garbage_vars['compost_title-id']
+                if GenGarbage.g_data.dumpster == 1:
+                    if GenGarbage.g_data.compost == 1:
+                        g_string = g_string + " & "
+                    g_string = g_string + GenGarbage.garbage_vars['dumpster_title-id']
+                if GenGarbage.g_data.xmas_tree == 1:
+                    if GenGarbage.g_data.dumpster == 1:
+                        g_string = g_string + " & "
+                    g_string = g_string + GenGarbage.garbage_vars['holiday-tree-schedule_title-id']
+                g_string = g_string + " " + GenGarbage.garbage_vars['all-garbage-time-message-end-id']
+
+            else:
+                applog("Garbage schedule" ,"Time to take the bins back in")
+                g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Garage.png'))
+                g_string = GenGarbage.garbage_vars['all-collection-time-over-message-line1-id']
+                g_sub_sting = GenGarbage.garbage_vars['all-collection-time-over-message-line2-id']
+            #print("Now trying to slice the text in chunks")
+            t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=font.SFReminder)
+            text_max = test_t_w
+            text_line_max = screen.reminder_max  - gTx
+            text_line = []
+            textbuffer = ""
+            #Split the quote into words in an array
+            schedule_words = g_string.split()
+            wl = len(g_string)
+            #See if the total is larger than the text_line_max value set.
+            if text_max > text_line_max:
+                l = 0
+                ql = len(schedule_words)
+                while l < ql:
+                    textbuffer = textbuffer + schedule_words[l] + " "
+                    l += 1
+                    t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),textbuffer, font=font.SFReminder)
+                    if test_t_w > text_line_max:
+                        text_line.append(textbuffer)
+                        textbuffer = ""
+                if (len(textbuffer)):
+                    text_line.append(textbuffer)
+            else :
+                text_line.append(g_string)
+            # Get number of arrays generated
+            qs = len(text_line)  
+            qc = 0
+            t_g, t_g, tg_w, tg_h = draw_black.textbbox((0,0),text_line[0], font=font.SFReminder)
+            while qc < qs:
+                draw_black.text((gTx, gTy), text_line[qc], font=font.SFReminder, fill=black)
+                qc += 1
+                gTy = gTy + int(tg_h)
+            draw_black.text((gTx, gTy), g_sub_sting, font=font.SFReminder_sub, fill=black)
+            sy_g, st_g, st_w, st_h = draw_black.textbbox((0,0),g_sub_sting, font=font.SFReminder_sub)
+            #gTy = gTy + int(st_h)
+            gTy = gTy + 5
+
+            # Now add the icons in sequence below the Schedule text
+            # Show the truck icon at the very right.
+            gTx = int(screen.width - int(g_image_end_icon.size[0])) - 10
+            imageB.paste(g_image_end_icon, (gTx, gTy), g_image_end_icon)
+            # Add the arrows icon poiting to the street
+            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Arrow.png'))
+            gTx = gTx - (int(g_image_icon.size[0])+10)
+            if screen.use_red == 1:
+                imageR.paste(g_image_icon, (gTx, gTy), g_image_icon)
+            else:
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+            gTx = gTx - (int(g_image_icon.size[0])+10)
+            if GenGarbage.g_data.xmas_tree == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Holiday.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+            if GenGarbage.g_data.dumpster == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Dumpster.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+            if GenGarbage.g_data.compost == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Compost.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+            if GenGarbage.g_data.recycle == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Recycle.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+            if GenGarbage.g_data.landfill == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Trash.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+            gYincr = int(g_image_icon.size[1]+10)
+            gTy = gTy + gYincr
+
+        if 1 in is_garbage_tomorrow :
+            if dashboard.show_quote == 1:
+                lx = 247
+                ly = gTy
+                draw_black.line([(lx, ly), ((lx+300), ly)], black)
+                gTy = gTy + 10
+
+
+            cal_todo_icon = Image.open(os.path.join(picdir, 'tomorrow_icon.png'))
+            cal_todo_iconB = Image.open(os.path.join(picdir, 'tomorrow_icon_B.png'))
+            cal_todo_iconR = Image.open(os.path.join(picdir, 'tomorrow_icon_R.png'))
+            gTx = 10 
+            applog("Garbage schedule" ,"there is garbage tomorrow")
+            if screen.use_red == 1:
+                imageR.paste(cal_todo_iconR,(gTx, gTy),cal_todo_iconR)
+                imageB.paste(cal_todo_iconB,(gTx, gTy),cal_todo_iconB)
+            else:
+                imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
+            gTx = gTx + int( cal_todo_icon.size[0] + 8 )
+            gTy = gTy - 8
+            #Build the garbage schedule reminder string
+            g_string = GenGarbage.garbage_vars['all-garbage-time-message-tomorrow-id'] + " "
+            if GenGarbage.g_data.landfill_prepapre == 1:
+                g_string = g_string + " "+GenGarbage.garbage_vars['landfill_title-id']
+            if GenGarbage.g_data.recycle_prepare == 1:
+                if GenGarbage.g_data.landfill_prepapre == 1:
                     g_string = g_string + " & "
                 g_string = g_string + GenGarbage.garbage_vars['recycle_title-id']
-            if GenGarbage.g_data.compost == 1:
-                if GenGarbage.g_data.recycle == 1:
+            if GenGarbage.g_data.compost_prepare == 1:
+                if GenGarbage.g_data.recycle_prepare == 1:
                     g_string = g_string + " & "
                 g_string = g_string + GenGarbage.garbage_vars['compost_title-id']
-            if GenGarbage.g_data.dumpster == 1:
-                if GenGarbage.g_data.compost == 1:
+            if GenGarbage.g_data.dumpster_prepapre == 1:
+                if GenGarbage.g_data.compost_prepare == 1:
                     g_string = g_string + " & "
                 g_string = g_string + GenGarbage.garbage_vars['dumpster_title-id']
-            if GenGarbage.g_data.xmas_tree == 1:
-                if GenGarbage.g_data.dumpster == 1:
-                    g_string = g_string + " & "
-                g_string = g_string + GenGarbage.garbage_vars['holiday-tree-schedule_title-id']
             g_string = g_string + " " + GenGarbage.garbage_vars['all-garbage-time-message-end-id']
 
-        else:
-            applog("Garbage schedule" ,"Time to take the bins back in")
-            g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Garage.png'))
-            g_string = GenGarbage.garbage_vars['all-collection-time-over-message-line1-id']
-            g_sub_sting = GenGarbage.garbage_vars['all-collection-time-over-message-line2-id']
-        #print("Now trying to slice the text in chunks")
-        t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=font.SFReminder)
-        text_max = test_t_w
-        text_line_max = screen.reminder_max  - gTx
-        text_line = []
-        textbuffer = ""
-        #Split the quote into words in an array
-        schedule_words = g_string.split()
-        wl = len(g_string)
-        #See if the total is larger than the text_line_max value set.
-        if text_max > text_line_max:
-            l = 0
-            ql = len(schedule_words)
-            while l < ql:
-                textbuffer = textbuffer + schedule_words[l] + " "
-                l += 1
-                t_g, t_g, test_t_w, test_t_h = draw_black.textbbox((0,0),textbuffer, font=font.SFReminder)
-                if test_t_w > text_line_max:
+            #print("Now trying to slice the text in chunks")
+            t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=font.SFReminder)
+            text_max = test_t_w
+            text_line_max = screen.reminder_max - gTx
+            text_line = []
+            textbuffer = ""
+            #Split the quote into words in an array
+            schedule_words = g_string.split()
+            wl = len(g_string)
+            #See if the total is larger than the text_line_max value set.
+            if text_max > text_line_max:
+                l = 0
+                ql = len(schedule_words)
+                while l < ql:
+                    textbuffer = textbuffer + schedule_words[l] + " "
+                    l += 1
+                    t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),textbuffer, font=font.SFReminder)
+                    if test_t_w > text_line_max:
+                        text_line.append(textbuffer)
+                        textbuffer = ""
+                if (len(textbuffer)):
                     text_line.append(textbuffer)
-                    textbuffer = ""
-            if (len(textbuffer)):
-                text_line.append(textbuffer)
-        else :
-            text_line.append(g_string)
-        # Get number of arrays generated
-        qs = len(text_line)  
-        qc = 0
-        t_g, t_g, tg_w, tg_h = draw_black.textbbox((0,0),text_line[0], font=font.SFReminder)
-        while qc < qs:
-            draw_black.text((gTx, gTy), text_line[qc], font=font.SFReminder, fill=black)
-            qc += 1
-            gTy = gTy + int(tg_h)
-        draw_black.text((gTx, gTy), g_sub_sting, font=font.SFReminder_sub, fill=black)
-        sy_g, st_g, st_w, st_h = draw_black.textbbox((0,0),g_sub_sting, font=font.SFReminder_sub)
-        #gTy = gTy + int(st_h)
-        gTy = gTy + 5
-        
-        # Now add the icons in sequence below the Schedule text
-        # Show the truck icon at the very right.
-        gTx = int(screen.width - int(g_image_end_icon.size[0])) - 10
-        imageB.paste(g_image_end_icon, (gTx, gTy), g_image_end_icon)
-        # Add the arrows icon poiting to the street
-        g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Arrow.png'))
-        gTx = gTx - (int(g_image_icon.size[0])+10)
-        if screen.use_red == 1:
-            imageR.paste(g_image_icon, (gTx, gTy), g_image_icon)
-        else:
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-        gTx = gTx - (int(g_image_icon.size[0])+10)
-        if GenGarbage.g_data.xmas_tree == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Holiday.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-        if GenGarbage.g_data.dumpster == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Dumpster.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-        if GenGarbage.g_data.compost == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Compost.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-        if GenGarbage.g_data.recycle == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Recycle.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-        if GenGarbage.g_data.landfill == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Trash.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-        gYincr = int(g_image_icon.size[1]+10)
-        gTy = gTy + gYincr
-        
-    if 1 in is_garbage_tomorrow :
-        if dashboard.show_quote == 1:
-            lx = 247
-            ly = gTy
-            draw_black.line([(lx, ly), ((lx+300), ly)], black)
-            gTy = gTy + 10
+            else :
+                text_line.append(g_string)
+            # Get number of arrays generated
+            qs = len(text_line)  
+            qc = 0
+            t_G, t_G, tg_w, tg_h = draw_black.textbbox((0,0),text_line[0], font=font.SFReminder)
+
+            while qc < qs:
+                draw_black.text((gTx, gTy), text_line[qc], font=font.SFReminder, fill=black)
+                qc += 1
+                gTy = gTy + int(tg_h)
+            draw_black.text((gTx, gTy), GenGarbage.garbage_vars['all-garbage-prepare-message-id'], font=font.SFReminder_sub, fill=black)
+
+            # Now add the icons in sequence below the Schedule text
+            sy_g, st_g, st_w, st_h = draw_black.textbbox((0,0),GenGarbage.garbage_vars['all-garbage-prepare-message-id'], font=font.SFReminder_sub)
+            #gTy = gTy + int(st_h)
+
+            # Show the street icon at the very right.
+            g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Tree.png'))
+            gTx = int(screen.width - int(g_image_end_icon.size[0])) - 10
+            imageB.paste(g_image_end_icon, (gTx, gTy), g_image_end_icon)
+            # Add the arrows icon poiting to the street
+            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Arrow.png'))
+            gTx = gTx - (int(g_image_icon.size[0])+10)
+            if screen.use_red == 1:
+                imageR.paste(g_image_icon, (gTx, gTy), g_image_icon)
+            else:
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+
+            gTx = gTx - (int(g_image_icon.size[0])+10)
 
 
-        cal_todo_icon = Image.open(os.path.join(picdir, 'tomorrow_icon.png'))
-        cal_todo_iconB = Image.open(os.path.join(picdir, 'tomorrow_icon_B.png'))
-        cal_todo_iconR = Image.open(os.path.join(picdir, 'tomorrow_icon_R.png'))
-        gTx = 10 
-        applog("Garbage schedule" ,"there is garbage tomorrow")
-        if screen.use_red == 1:
-            imageR.paste(cal_todo_iconR,(gTx, gTy),cal_todo_iconR)
-            imageB.paste(cal_todo_iconB,(gTx, gTy),cal_todo_iconB)
-        else:
-            imageB.paste(cal_todo_icon,(gTx, gTy),cal_todo_icon)
-        gTx = gTx + int( cal_todo_icon.size[0] + 8 )
-        gTy = gTy - 8
-        #Build the garbage schedule reminder string
-        g_string = GenGarbage.garbage_vars['all-garbage-time-message-tomorrow-id'] + " "
-        if GenGarbage.g_data.landfill_prepapre == 1:
-            g_string = g_string + " "+GenGarbage.garbage_vars['landfill_title-id']
-        if GenGarbage.g_data.recycle_prepare == 1:
-            if GenGarbage.g_data.landfill_prepapre == 1:
-                g_string = g_string + " & "
-            g_string = g_string + GenGarbage.garbage_vars['recycle_title-id']
-        if GenGarbage.g_data.compost_prepare == 1:
-            if GenGarbage.g_data.recycle_prepare == 1:
-                g_string = g_string + " & "
-            g_string = g_string + GenGarbage.garbage_vars['compost_title-id']
-        if GenGarbage.g_data.dumpster_prepapre == 1:
+            if GenGarbage.g_data.dumpster_prepapre == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Dumpster.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
+
             if GenGarbage.g_data.compost_prepare == 1:
-                g_string = g_string + " & "
-            g_string = g_string + GenGarbage.garbage_vars['dumpster_title-id']
-        g_string = g_string + " " + GenGarbage.garbage_vars['all-garbage-time-message-end-id']
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Compost.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
 
-        #print("Now trying to slice the text in chunks")
-        t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),g_string, font=font.SFReminder)
-        text_max = test_t_w
-        text_line_max = screen.reminder_max - gTx
-        text_line = []
-        textbuffer = ""
-        #Split the quote into words in an array
-        schedule_words = g_string.split()
-        wl = len(g_string)
-        #See if the total is larger than the text_line_max value set.
-        if text_max > text_line_max:
-            l = 0
-            ql = len(schedule_words)
-            while l < ql:
-                textbuffer = textbuffer + schedule_words[l] + " "
-                l += 1
-                t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),textbuffer, font=font.SFReminder)
-                if test_t_w > text_line_max:
-                    text_line.append(textbuffer)
-                    textbuffer = ""
-            if (len(textbuffer)):
-                text_line.append(textbuffer)
-        else :
-            text_line.append(g_string)
-        # Get number of arrays generated
-        qs = len(text_line)  
-        qc = 0
-        t_G, t_G, tg_w, tg_h = draw_black.textbbox((0,0),text_line[0], font=font.SFReminder)
+            if GenGarbage.g_data.recycle_prepare == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Recycle.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
 
-        while qc < qs:
-            draw_black.text((gTx, gTy), text_line[qc], font=font.SFReminder, fill=black)
-            qc += 1
-            gTy = gTy + int(tg_h)
-        draw_black.text((gTx, gTy), GenGarbage.garbage_vars['all-garbage-prepare-message-id'], font=font.SFReminder_sub, fill=black)
-
-        # Now add the icons in sequence below the Schedule text
-        sy_g, st_g, st_w, st_h = draw_black.textbbox((0,0),GenGarbage.garbage_vars['all-garbage-prepare-message-id'], font=font.SFReminder_sub)
-        #gTy = gTy + int(st_h)
-
-        # Show the street icon at the very right.
-        g_image_end_icon = Image.open(os.path.join(picdir, 'Garbage_Tree.png'))
-        gTx = int(screen.width - int(g_image_end_icon.size[0])) - 10
-        imageB.paste(g_image_end_icon, (gTx, gTy), g_image_end_icon)
-        # Add the arrows icon poiting to the street
-        g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Arrow.png'))
-        gTx = gTx - (int(g_image_icon.size[0])+10)
-        if screen.use_red == 1:
-           imageR.paste(g_image_icon, (gTx, gTy), g_image_icon)
-        else:
-           imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-
-        gTx = gTx - (int(g_image_icon.size[0])+10)
-        
-
-        if GenGarbage.g_data.dumpster_prepapre == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Dumpster.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-
-        if GenGarbage.g_data.compost_prepare == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Compost.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-
-        if GenGarbage.g_data.recycle_prepare == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Recycle.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
-
-        if GenGarbage.g_data.landfill_prepapre == 1:
-            g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Trash.png'))
-            imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
-            gTx = gTx - int(g_image_icon.size[1]+4)
+            if GenGarbage.g_data.landfill_prepapre == 1:
+                g_image_icon = Image.open(os.path.join(picdir, 'Garbage_Trash.png'))
+                imageB.paste(g_image_icon, (gTx, gTy), g_image_icon)
+                gTx = gTx - int(g_image_icon.size[1]+4)
 
 
 
-    t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),hourglass.last_refresh, font=font.SFMonth)
-    gTx = int(screen.middle_w) - int(test_t_w/2)
-    gTy = screen.height - int(test_t_h + 4)
-    draw_black.text((gTx, gTy), hourglass.last_refresh, font=font.SFMonth, fill=black)
+        t_G, t_G, test_t_w, test_t_h = draw_black.textbbox((0,0),hourglass.last_refresh, font=font.SFMonth)
+        gTx = int(screen.middle_w) - int(test_t_w/2)
+        gTy = screen.height - int(test_t_h + 4)
+        draw_black.text((gTx, gTy), hourglass.last_refresh, font=font.SFMonth, fill=black)
 
+    else:
+        applog("Dashboard","Garbage Schedule | OFF")
 
     #Save screenshot
     #s_b = imageB.convert('RGBA')
@@ -1706,14 +1712,14 @@ def crashlog(file_path:str, crash_message: str):
     if os.path.exists(subdir) == False:
         os.mkdir(subdir)
     aqi_array = []
-    date_time_stamp = datetime.now().strftime("%m.%b.%Y, %H:%M:%S")
+    date_time_stamp = datetime.now().strftime("%d.%b.%Y, %H:%M:%S")
     my_file = open(file_path, 'a')
     applog("Inkscreen" ,"Logging crash message")
     my_file.write(date_time_stamp+" | "+crash_message+'\n')
     my_file.close
 
 def applog(app_section: str ,app_message: str):
-    date_time_stamp = datetime.now().strftime("%m.%b.%Y, %H:%M:%S")
+    date_time_stamp = datetime.now().strftime("%d.%b.%Y, %H:%M:%S")
     print(date_time_stamp+" | "+app_section+" | "+app_message)
 
 
